@@ -453,6 +453,47 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_cancellations: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string
+          cancelled_by: string
+          id: string
+          notes: string | null
+          original_total: number
+          sale_id: string
+          user_role: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string
+          cancelled_by: string
+          id?: string
+          notes?: string | null
+          original_total: number
+          sale_id: string
+          user_role: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string
+          cancelled_by?: string
+          id?: string
+          notes?: string | null
+          original_total?: number
+          sale_id?: string
+          user_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_cancellations_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           combo_id: string | null

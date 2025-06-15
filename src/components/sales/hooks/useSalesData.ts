@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useCancelSale } from './useCancelSale';
 
 interface CreateSaleData {
   customer_id?: string;
@@ -82,6 +83,9 @@ export const useSalesData = () => {
     },
   });
 
+  // Usar hook especializado para cancelar ventas
+  const cancelSaleMutation = useCancelSale();
+
   // Helper: Verifica si el usuario tiene privilegio
   const checkHasPrivileges = async () => {
     if (!user) return false;
@@ -92,83 +96,6 @@ export const useSalesData = () => {
   };
 
   // Nueva versión: cancelar venta solo si corresponde
-  const cancelSaleMutation = useMutation({
-    mutationFn: async (saleId: string) => {
-      if (!user) throw new Error('No autenticado');
-
-      // Obtener venta y sus datos clave
-      const { data: sale, error: fetchError } = await supabase
-        .from('sales')
-        .select(`*, sale_items(*)`)
-        .eq('id', saleId)
-        .single();
-
-      if (fetchError || !sale) {
-        throw new Error('No se pudo obtener la venta');
-      }
-
-      // VALIDACION: privilegio o vendedor mismo con caja abierta asociado
-      const hasPrivileges = await checkHasPrivileges();
-
-      if (!hasPrivileges) {
-        // Solo el creador puede, y si su caja sigue abierta
-        if (sale.created_by !== user.id) {
-          throw new Error('Solo puede cancelar esta venta el administrador o quien la realizó');
-        }
-        // ¿Tiene caja abierta?
-        const { data: session } = await supabase
-          .from('cash_register_sessions')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('status', 'open')
-          .maybeSingle();
-        if (!session) {
-          throw new Error('Debes tener la caja abierta para cancelar tu propia venta');
-        }
-      }
-
-      // Continuar con las demás validaciones originales:
-      const saleDate = new Date(sale.created_at);
-      const today = new Date();
-      const isToday = saleDate.toDateString() === today.toDateString();
-      if (!isToday) throw new Error('Solo se pueden cancelar ventas del día actual');
-      if (sale.sale_status === 'cancelled') throw new Error('Esta venta ya está cancelada');
-      const allowedMethods = ['cash', 'card', 'transfer'];
-      if (!allowedMethods.includes(sale.payment_method)) {
-        throw new Error('No se pueden cancelar ventas a cuenta o métodos mixtos');
-      }
-
-      // Actualizar el estado
-      const { error: updateError } = await supabase
-        .from('sales')
-        .update({ 
-          sale_status: 'cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', saleId);
-
-      if (updateError) throw updateError;
-
-      return sale;
-    },
-    onSuccess: (sale) => {
-      toast({
-        title: 'Venta cancelada',
-        description: `La venta ${sale.sale_number} fue cancelada correctamente`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['sales-history'] });
-      queryClient.invalidateQueries({ queryKey: ['products-with-stock'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error al cancelar venta',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: CreateSaleData) => {
       const { data: saleNumber } = await supabase.rpc('generate_sale_number');
