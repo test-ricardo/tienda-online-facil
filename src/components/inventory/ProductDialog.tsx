@@ -69,7 +69,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   });
 
   useEffect(() => {
-    if (product) {
+    if (product && open) {
       setFormData({
         name: product.name || '',
         description: product.description || '',
@@ -84,7 +84,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
         min_stock: product.min_stock?.toString() || '',
         max_stock: product.max_stock?.toString() || '',
       });
-    } else {
+    } else if (!product && open) {
       setFormData({
         name: '',
         description: '',
@@ -107,30 +107,67 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     setLoading(true);
 
     try {
+      // Validaciones básicas
+      if (!formData.name.trim()) {
+        throw new Error('El nombre del producto es requerido');
+      }
+      if (!formData.sku.trim()) {
+        throw new Error('El SKU es requerido');
+      }
+      if (!formData.category_id) {
+        throw new Error('La categoría es requerida');
+      }
+      if (!formData.price || parseFloat(formData.price) <= 0) {
+        throw new Error('El precio debe ser mayor a 0');
+      }
+      if (!formData.cost || parseFloat(formData.cost) <= 0) {
+        throw new Error('El costo debe ser mayor a 0');
+      }
+
       const data = {
-        ...formData,
+        name: formData.name.trim(),
+        description: formData.description.trim() || null,
+        sku: formData.sku.trim(),
+        barcode: formData.barcode.trim() || null,
+        category_id: formData.category_id,
+        subcategory_id: formData.subcategory_id || null,
         price: parseFloat(formData.price),
         cost: parseFloat(formData.cost),
+        sell_by_weight: formData.sell_by_weight,
+        stock_unit: formData.stock_unit,
         min_stock: formData.min_stock ? parseFloat(formData.min_stock) : 0,
         max_stock: formData.max_stock ? parseFloat(formData.max_stock) : null,
-        subcategory_id: formData.subcategory_id || null,
       };
 
       if (product) {
+        console.log('Actualizando producto:', product.id, data);
         const { error } = await supabase
           .from('products')
           .update(data)
           .eq('id', product.id);
         if (error) throw error;
+        
+        toast({
+          title: 'Producto actualizado',
+          description: 'El producto se ha actualizado correctamente.',
+        });
       } else {
+        console.log('Creando nuevo producto:', data);
         const { error } = await supabase
           .from('products')
           .insert([data]);
         if (error) throw error;
+        
+        toast({
+          title: 'Producto creado',
+          description: 'El producto se ha creado correctamente.',
+        });
       }
 
       onSuccess();
+      onOpenChange(false);
     } catch (error: any) {
+      console.error('Error al guardar producto:', error);
       toast({
         title: 'Error',
         description: error.message,
@@ -139,6 +176,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    onOpenChange(false);
   };
 
   const stockUnits = [
@@ -312,7 +353,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
