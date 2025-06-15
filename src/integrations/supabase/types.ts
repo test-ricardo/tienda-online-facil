@@ -568,6 +568,7 @@ export type Database = {
           subtotal: number
           tax_amount: number
           total_amount: number
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -587,6 +588,7 @@ export type Database = {
           subtotal?: number
           tax_amount?: number
           total_amount?: number
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -606,6 +608,7 @@ export type Database = {
           subtotal?: number
           tax_amount?: number
           total_amount?: number
+          updated_at?: string
         }
         Relationships: [
           {
