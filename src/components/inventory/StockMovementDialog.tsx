@@ -42,17 +42,28 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
     setLoading(true);
 
     try {
-      let actualMovementType = formData.movement_type;
-      let actualQuantity = parseFloat(formData.quantity);
+      const quantity = parseFloat(formData.quantity);
+      
+      if (quantity <= 0) {
+        toast({
+          title: 'Error',
+          description: 'La cantidad debe ser mayor a 0.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      let finalMovementType = formData.movement_type;
+      let finalQuantity = quantity;
+      let finalNotes = formData.notes;
 
       // Para ajustes, calcular la diferencia con el stock actual
       if (formData.movement_type === 'adjustment') {
-        // Obtener stock actual
         const { data: currentStock } = await supabase
           .rpc('get_product_stock', { product_id: product.id });
 
-        const targetStock = parseFloat(formData.quantity);
-        const stockDifference = targetStock - (currentStock || 0);
+        const stockDifference = quantity - (currentStock || 0);
 
         if (stockDifference === 0) {
           toast({
@@ -63,78 +74,63 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
           return;
         }
 
-        // Determinar el tipo de movimiento y cantidad real
+        // Determinar el tipo de movimiento real basado en la diferencia
         if (stockDifference > 0) {
-          actualMovementType = 'entry';
-          actualQuantity = stockDifference;
+          finalMovementType = 'entry';
+          finalQuantity = stockDifference;
         } else {
-          actualMovementType = 'exit';
-          actualQuantity = Math.abs(stockDifference);
+          finalMovementType = 'exit';
+          finalQuantity = Math.abs(stockDifference);
         }
+
+        finalNotes = `Ajuste de stock a ${quantity} ${product.stock_unit}. ${formData.notes || ''}`.trim();
       }
 
-      // Crear el movimiento de stock
+      // Solo registrar el movimiento - el trigger se encarga del resto
       const { error: movementError } = await supabase
         .from('stock_movements')
         .insert([{
           product_id: product.id,
-          movement_type: formData.movement_type, // Mantener el tipo original para el registro
-          quantity: parseFloat(formData.quantity), // Mantener la cantidad original para el registro
-          notes: formData.movement_type === 'adjustment' 
-            ? `Ajuste de stock a ${formData.quantity} ${product.stock_unit}. ${formData.notes || ''}`.trim()
-            : formData.notes || null,
+          movement_type: finalMovementType,
+          quantity: finalQuantity,
+          notes: finalNotes || null,
           created_by: user.id,
         }]);
 
       if (movementError) throw movementError;
 
-      // Aplicar el movimiento real al inventario
-      if (actualMovementType === 'entry' && actualQuantity > 0) {
-        const { error: inventoryError } = await supabase
+      // Si es una entrada, podemos agregar información adicional al inventario
+      if ((finalMovementType === 'entry' || formData.movement_type === 'adjustment') && 
+          (formData.expiration_date || formData.batch_number || formData.supplier)) {
+        
+        // Buscar el registro de inventario más reciente para este producto
+        const { data: latestInventory } = await supabase
           .from('inventory')
-          .insert([{
-            product_id: product.id,
-            quantity: actualQuantity,
-            expiration_date: formData.expiration_date || null,
-            batch_number: formData.batch_number || null,
-            supplier: formData.supplier || null,
-            notes: formData.movement_type === 'adjustment' ? 'Ajuste de inventario' : formData.notes || null,
-          }]);
-
-        if (inventoryError) throw inventoryError;
-      } else if (actualMovementType === 'exit' && actualQuantity > 0) {
-        // Para salidas, usar FIFO para reducir del inventario
-        const { data: availableStock } = await supabase
-          .from('inventory')
-          .select('id, quantity')
+          .select('id')
           .eq('product_id', product.id)
-          .gt('quantity', 0)
-          .order('entry_date')
-          .order('id');
+          .order('entry_date', { ascending: false })
+          .limit(1);
 
-        if (availableStock) {
-          let remainingToReduce = actualQuantity;
-          
-          for (const stockItem of availableStock) {
-            if (remainingToReduce <= 0) break;
-            
-            const reductionAmount = Math.min(stockItem.quantity, remainingToReduce);
-            
-            await supabase
-              .from('inventory')
-              .update({ quantity: stockItem.quantity - reductionAmount })
-              .eq('id', stockItem.id);
-            
-            remainingToReduce -= reductionAmount;
-          }
+        if (latestInventory && latestInventory.length > 0) {
+          // Actualizar el registro más reciente con la información adicional
+          await supabase
+            .from('inventory')
+            .update({
+              expiration_date: formData.expiration_date || null,
+              batch_number: formData.batch_number || null,
+              supplier: formData.supplier || null,
+            })
+            .eq('id', latestInventory[0].id);
         }
       }
 
+      const successMessage = formData.movement_type === 'adjustment' 
+        ? `Stock ajustado a ${quantity} ${product.stock_unit}`
+        : 'El movimiento de stock se ha registrado correctamente.';
+
       toast({
         title: 'Movimiento registrado',
-        description: formData.movement_type === 'adjustment' 
-          ? `Stock ajustado a ${formData.quantity} ${product.stock_unit}`
-          : 'El movimiento de stock se ha registrado correctamente.',
+        description: successMessage,
       });
 
       setFormData({
@@ -148,6 +144,7 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
 
       onSuccess();
     } catch (error: any) {
+      console.error('Error in stock movement:', error);
       toast({
         title: 'Error',
         description: error.message,
