@@ -1,14 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, Plus, Minus, X } from 'lucide-react';
 import { useCartData } from './hooks/useCartData';
 import { useSalesData } from './hooks/useSalesData';
-import CustomerSelector from './components/CustomerSelector';
-import PaymentMethodSelector from './components/PaymentMethodSelector';
+import ProductSearchSection from './components/ProductSearchSection';
+import SaleConfigurationSection from './components/SaleConfigurationSection';
+import CartSection from './components/CartSection';
 import SaleConfirmationDialog from './components/SaleConfirmationDialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -210,258 +206,50 @@ const POSTab = () => {
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Products/Combos Section */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Search */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Buscar Productos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  ref={searchInputRef}
-                  placeholder="Buscar por nombre, SKU o código de barras... (Enter para agregar)"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={handleSearchKeyPress}
-                  className="pl-10 text-lg"
-                  autoComplete="off"
-                />
-              </div>
-              
-              {/* Input de cantidad para productos fraccionables */}
-              {filteredProducts.length === 1 && (filteredProducts[0].sell_by_weight || filteredProducts[0].stock_unit !== 'unit') && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-                  <label className="block text-sm font-medium text-blue-800 mb-2">
-                    Cantidad ({filteredProducts[0].stock_unit}):
-                  </label>
-                  <Input
-                    ref={quantityInputRef}
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder="Ingresa la cantidad"
-                    className="w-32"
-                    onKeyPress={async (e) => {
-                      if (e.key === 'Enter') {
-                        const quantity = parseFloat((e.target as HTMLInputElement).value);
-                        if (quantity > 0) {
-                          await handleAddProduct(filteredProducts[0], quantity);
-                          setSearchTerm('');
-                          (e.target as HTMLInputElement).value = '';
-                          if (searchInputRef.current) {
-                            searchInputRef.current.focus();
-                          }
-                        }
-                      }
-                    }}
-                    onKeyDown={(e) => handleTabNavigation(e, customerSelectorRef)}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Products Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredProducts.map((product) => (
-              <Card key={product.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-sm">{product.name}</h3>
-                    <Badge variant="secondary">{product.sku}</Badge>
-                  </div>
-                  <p className="text-gray-600 text-xs mb-2">
-                    {product.categories?.name} {product.subcategories && `- ${product.subcategories.name}`}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-green-600">
-                      ${product.price.toFixed(2)}
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => handleAddProduct(product)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            
-            {filteredCombos.map((combo) => (
-              <Card key={combo.id} className="cursor-pointer hover:shadow-lg transition-shadow border-orange-200">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-sm">{combo.name}</h3>
-                    <Badge variant="outline" className="text-orange-600 border-orange-300">
-                      COMBO
-                    </Badge>
-                  </div>
-                  <p className="text-gray-600 text-xs mb-2">{combo.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-orange-600">
-                      ${combo.combo_price.toFixed(2)}
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => handleAddCombo(combo)}
-                      className="h-8 w-8 p-0 bg-orange-600 hover:bg-orange-700"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="lg:col-span-2">
+          <ProductSearchSection
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            searchInputRef={searchInputRef}
+            quantityInputRef={quantityInputRef}
+            customerSelectorRef={customerSelectorRef}
+            filteredProducts={filteredProducts}
+            filteredCombos={filteredCombos}
+            handleSearchKeyPress={handleSearchKeyPress}
+            handleTabNavigation={handleTabNavigation}
+            handleAddProduct={handleAddProduct}
+            handleAddCombo={handleAddCombo}
+          />
         </div>
 
-        {/* Cart Section - Más visible */}
+        {/* Cart and Configuration Section */}
         <div className="space-y-6">
-          {/* Customer & Payment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="h-5 w-5" />
-                Configuración de Venta
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div ref={customerSelectorRef} tabIndex={-1}>
-                <CustomerSelector
-                  customers={customers || []}
-                  selectedCustomer={customerSelected}
-                  onSelectCustomer={setCustomerSelected}
-                  onKeyDown={(e) => handleTabNavigation(e, paymentMethodRef)}
-                />
-              </div>
-              
-              <div ref={paymentMethodRef} tabIndex={-1}>
-                <PaymentMethodSelector
-                  paymentMethod={paymentMethod}
-                  onPaymentMethodChange={setPaymentMethod}
-                  customerSelected={customerSelected}
-                />
-              </div>
+          <SaleConfigurationSection
+            customerSelectorRef={customerSelectorRef}
+            paymentMethodRef={paymentMethodRef}
+            customers={customers || []}
+            customerSelected={customerSelected}
+            setCustomerSelected={setCustomerSelected}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            discount={discount}
+            setDiscount={setDiscount}
+            handleTabNavigation={handleTabNavigation}
+            handleCompleteSale={handleCompleteSale}
+          />
 
-              <div>
-                <label className="text-sm font-medium">Descuento (%)</label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                  placeholder="0"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleCompleteSale();
-                    }
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cart Items - Mejorado y más visible */}
-          <Card className="border-2 border-blue-200">
-            <CardHeader className="bg-blue-50">
-              <CardTitle className="text-blue-800">
-                Carrito ({cartItems.length} {cartItems.length === 1 ? 'artículo' : 'artículos'})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="space-y-2 max-h-80 overflow-y-auto p-4">
-                {cartItems.map((item) => (
-                  <div key={`${item.id}-${item.type}`} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.name}</p>
-                      <p className="text-gray-600 text-xs">
-                        ${item.price.toFixed(2)} {item.stock_unit && `/ ${item.stock_unit}`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateQuantity(item.id, item.type, item.quantity - 1)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="text-sm font-bold w-12 text-center bg-gray-100 py-1 rounded">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateQuantity(item.id, item.type, item.quantity + 1)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => removeFromCart(item.id, item.type)}
-                        className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {cartItems.length === 0 && (
-                  <div className="text-center py-8">
-                    <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500">El carrito está vacío</p>
-                    <p className="text-xs text-gray-400">Busca productos para agregar</p>
-                  </div>
-                )}
-              </div>
-
-              {cartItems.length > 0 && (
-                <div className="border-t bg-gray-50 p-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-base">
-                      <span>Subtotal:</span>
-                      <span className="font-semibold">${getSubtotal().toFixed(2)}</span>
-                    </div>
-                    {discount > 0 && (
-                      <div className="flex justify-between text-base text-green-600">
-                        <span>Descuento ({discount}%):</span>
-                        <span className="font-semibold">-${getDiscountAmount().toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-xl text-blue-800 border-t pt-2">
-                      <span>TOTAL:</span>
-                      <span className="bg-blue-100 px-3 py-1 rounded">${getTotal().toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      variant="outline"
-                      onClick={clearCart}
-                      className="flex-1"
-                    >
-                      Limpiar
-                    </Button>
-                    <Button
-                      onClick={handleCompleteSale}
-                      disabled={isCreatingSale}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-lg py-3"
-                    >
-                      {isCreatingSale ? 'Procesando...' : 'Completar Venta (Enter)'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CartSection
+            cartItems={cartItems}
+            updateQuantity={updateQuantity}
+            removeFromCart={removeFromCart}
+            clearCart={clearCart}
+            getSubtotal={getSubtotal}
+            getDiscountAmount={getDiscountAmount}
+            getTotal={getTotal}
+            discount={discount}
+            handleCompleteSale={handleCompleteSale}
+            isCreatingSale={isCreatingSale}
+          />
         </div>
       </div>
 
