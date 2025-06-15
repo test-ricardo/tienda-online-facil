@@ -155,7 +155,8 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
             </div>
           ))}
         </div>
-        <div className="border-t pt-4">
+        {/* Contenedor sticky para el total contado */}
+        <div className="sticky bottom-0 left-0 right-0 bg-white z-10 border-t pt-4 pb-4 shadow-[0_-2px_8px_0_rgba(0,0,0,0.04)]">
           <div className="flex justify-between items-center text-xl font-bold">
             <span>Total Contado:</span>
             <span className="text-green-600">${totalCounted.toLocaleString()}</span>
