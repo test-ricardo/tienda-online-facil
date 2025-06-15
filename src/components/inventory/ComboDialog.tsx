@@ -63,7 +63,13 @@ const ComboDialog: React.FC<ComboDialogProps> = ({
         start_date: combo.start_date ? combo.start_date.split('T')[0] : '',
         end_date: combo.end_date ? combo.end_date.split('T')[0] : '',
       });
-      setSelectedItems(combo.combo_items || []);
+      // Normalize the combo items data structure
+      const normalizedItems = (combo.combo_items || []).map((item: any) => ({
+        product_id: item.product_id,
+        products: item.products, // Keep the existing structure for loaded combos
+        quantity: item.quantity,
+      }));
+      setSelectedItems(normalizedItems);
     } else {
       setFormData({
         name: '',
@@ -91,7 +97,7 @@ const ComboDialog: React.FC<ComboDialogProps> = ({
     } else {
       setSelectedItems([...selectedItems, {
         product_id: selectedProduct,
-        product: product,
+        products: product, // Use 'products' to match the data structure from the database
         quantity: parseFloat(itemQuantity),
       }]);
     }
@@ -106,7 +112,8 @@ const ComboDialog: React.FC<ComboDialogProps> = ({
 
   const calculateTotalCost = () => {
     return selectedItems.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      const productPrice = item.products?.price || 0;
+      return total + (productPrice * item.quantity);
     }, 0);
   };
 
@@ -286,24 +293,29 @@ const ComboDialog: React.FC<ComboDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              {selectedItems.map((item) => (
-                <div key={item.product_id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{item.product.name}</span>
-                    <Badge variant="outline">
-                      {item.quantity}x ${item.product.price} = ${(item.quantity * item.product.price).toFixed(2)}
-                    </Badge>
+              {selectedItems.map((item) => {
+                const productName = item.products?.name || 'Producto no encontrado';
+                const productPrice = item.products?.price || 0;
+                
+                return (
+                  <div key={item.product_id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{productName}</span>
+                      <Badge variant="outline">
+                        {item.quantity}x ${productPrice} = ${(item.quantity * productPrice).toFixed(2)}
+                      </Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(item.product_id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeItem(item.product_id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {selectedItems.length > 0 && (
