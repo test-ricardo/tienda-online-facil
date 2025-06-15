@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,10 +55,6 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
   const totalCounted = calculateTotal();
   const difference = totalCounted - registerState.currentAmount;
 
-  // Si aún no se completó el arqueo, bloquea el cierre
-  const allCounted = denominations.some(d => (cashCount[d.value] || 0) > 0);
-
-  // Cierre automatizado: mostrar resumen si showCloseSummary es true
   if (showCloseSummary) {
     return (
       <Card>
@@ -177,15 +172,9 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
             variant="default"
             className="w-full mt-4"
             onClick={() => onShowCloseSummary(true)}
-            disabled={!allCounted}
           >
             Continuar y cerrar caja
           </Button>
-        )}
-        {!allCounted && registerState.isOpen && (
-          <p className="text-xs text-red-700 mt-2 text-center font-semibold">
-            Ingresa al menos la cantidad de un billete antes de continuar con el cierre.
-          </p>
         )}
       </CardContent>
     </Card>
