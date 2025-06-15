@@ -29,7 +29,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   ];
 
   const getAvailableCredit = (customer: any) => {
-    if (!customer?.credit_enabled) return 0;
+    const creditEnabled = (customer as any)?.credit_enabled ?? false;
+    if (!creditEnabled) return 0;
     if (customer.current_balance >= 0) {
       return customer.credit_limit + customer.current_balance;
     }
@@ -37,9 +38,10 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   const canUseCredit = () => {
+    const creditEnabled = (customerSelected as any)?.credit_enabled ?? false;
     return customerSelected && 
            customerSelected.is_active && 
-           customerSelected.credit_enabled && 
+           creditEnabled && 
            customerSelected.credit_limit > 0;
   };
 
@@ -96,8 +98,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 <span className="font-medium">Ventas a cuenta no disponibles</span>
               </div>
               <div className="text-red-600 text-xs mt-1">
-                {!customerSelected.credit_enabled && "• Crédito deshabilitado para este cliente"}
-                {customerSelected.credit_enabled && customerSelected.credit_limit <= 0 && "• Sin límite de crédito configurado"}
+                {!(customerSelected as any)?.credit_enabled && "• Crédito deshabilitado para este cliente"}
+                {(customerSelected as any)?.credit_enabled && customerSelected.credit_limit <= 0 && "• Sin límite de crédito configurado"}
                 {!customerSelected.is_active && "• Cliente inactivo"}
               </div>
             </div>

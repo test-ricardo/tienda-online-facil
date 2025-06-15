@@ -103,22 +103,27 @@ export const useSalesData = () => {
           throw new Error('Error al verificar información del cliente');
         }
 
-        if (!customer.is_active) {
+        const isActive = (customer as any).is_active ?? false;
+        const creditEnabled = (customer as any).credit_enabled ?? false;
+        const creditLimit = (customer as any).credit_limit ?? 0;
+        const currentBalance = (customer as any).current_balance ?? 0;
+
+        if (!isActive) {
           throw new Error('El cliente no está activo');
         }
 
-        if (!customer.credit_enabled) {
+        if (!creditEnabled) {
           throw new Error('Las ventas a cuenta están deshabilitadas para este cliente');
         }
 
-        if (customer.credit_limit <= 0) {
+        if (creditLimit <= 0) {
           throw new Error('El cliente no tiene límite de crédito configurado');
         }
 
         // Verificar límite de crédito disponible
-        const availableCredit = customer.current_balance >= 0 
-          ? customer.credit_limit + customer.current_balance 
-          : Math.max(0, customer.credit_limit + customer.current_balance);
+        const availableCredit = currentBalance >= 0 
+          ? creditLimit + currentBalance 
+          : Math.max(0, creditLimit + currentBalance);
 
         if (total > availableCredit) {
           throw new Error(`El monto excede el crédito disponible. Disponible: $${availableCredit.toFixed(2)}, Requerido: $${total.toFixed(2)}`);

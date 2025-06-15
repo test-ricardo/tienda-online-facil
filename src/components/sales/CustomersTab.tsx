@@ -68,7 +68,8 @@ const CustomersTab = () => {
   };
 
   const handleToggleCreditEnabled = (customer: any) => {
-    toggleCreditEnabled({ id: customer.id, creditEnabled: !customer.credit_enabled });
+    const creditEnabled = (customer as any).credit_enabled ?? false;
+    toggleCreditEnabled({ id: customer.id, creditEnabled: !creditEnabled });
   };
 
   const getDocumentTypeLabel = (type: string) => {
@@ -81,7 +82,8 @@ const CustomersTab = () => {
   };
 
   const getAvailableCredit = (customer: any) => {
-    if (!customer.credit_enabled) return 0;
+    const creditEnabled = (customer as any).credit_enabled ?? false;
+    if (!creditEnabled) return 0;
     if (customer.current_balance >= 0) {
       return customer.credit_limit + customer.current_balance;
     }
@@ -142,109 +144,112 @@ const CustomersTab = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{customer.name}</div>
-                        <div className="text-sm text-gray-500">{customer.customer_code}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {customer.document_type && customer.document_number ? (
-                          <div>
-                            <div className="font-medium">
-                              {getDocumentTypeLabel(customer.document_type)}
-                            </div>
-                            <div className="text-gray-500">{customer.document_number}</div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">Sin documento</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {customer.email && <div>{customer.email}</div>}
-                        {customer.phone && <div className="text-gray-500">{customer.phone}</div>}
-                        {!customer.email && !customer.phone && (
-                          <span className="text-gray-400">Sin contacto</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            ${customer.credit_limit?.toFixed(2) || '0.00'}
-                          </span>
-                          <Badge 
-                            variant={customer.credit_enabled ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {customer.credit_enabled ? 'Habilitado' : 'Deshabilitado'}
-                          </Badge>
+                {filteredCustomers.map((customer) => {
+                  const creditEnabled = (customer as any).credit_enabled ?? false;
+                  return (
+                    <TableRow key={customer.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{customer.name}</div>
+                          <div className="text-sm text-gray-500">{customer.customer_code}</div>
                         </div>
-                        {customer.credit_enabled && (
-                          <div className="text-xs text-gray-500">
-                            Disponible: ${getAvailableCredit(customer).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {customer.document_type && customer.document_number ? (
+                            <div>
+                              <div className="font-medium">
+                                {getDocumentTypeLabel(customer.document_type)}
+                              </div>
+                              <div className="text-gray-500">{customer.document_number}</div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Sin documento</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {customer.email && <div>{customer.email}</div>}
+                          {customer.phone && <div className="text-gray-500">{customer.phone}</div>}
+                          {!customer.email && !customer.phone && (
+                            <span className="text-gray-400">Sin contacto</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              ${customer.credit_limit?.toFixed(2) || '0.00'}
+                            </span>
+                            <Badge 
+                              variant={creditEnabled ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {creditEnabled ? 'Habilitado' : 'Deshabilitado'}
+                            </Badge>
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className={`font-medium ${
-                        customer.current_balance >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${customer.current_balance?.toFixed(2) || '0.00'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={customer.is_active ? 'default' : 'secondary'}>
-                        {customer.is_active ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditCustomer(customer)}
-                          title="Editar cliente"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleStatus(customer)}
-                          className={customer.is_active ? 'text-red-600' : 'text-green-600'}
-                          title={customer.is_active ? 'Desactivar cliente' : 'Activar cliente'}
-                        >
-                          {customer.is_active ? (
-                            <UserX className="h-3 w-3" />
-                          ) : (
-                            <UserCheck className="h-3 w-3" />
+                          {creditEnabled && (
+                            <div className="text-xs text-gray-500">
+                              Disponible: ${getAvailableCredit(customer).toFixed(2)}
+                            </div>
                           )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleCreditEnabled(customer)}
-                          className={customer.credit_enabled ? 'text-orange-600' : 'text-blue-600'}
-                          title={customer.credit_enabled ? 'Deshabilitar crédito' : 'Habilitar crédito'}
-                        >
-                          {customer.credit_enabled ? (
-                            <ShieldOff className="h-3 w-3" />
-                          ) : (
-                            <ShieldCheck className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className={`font-medium ${
+                          customer.current_balance >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          ${customer.current_balance?.toFixed(2) || '0.00'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={customer.is_active ? 'default' : 'secondary'}>
+                          {customer.is_active ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditCustomer(customer)}
+                            title="Editar cliente"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleStatus(customer)}
+                            className={customer.is_active ? 'text-red-600' : 'text-green-600'}
+                            title={customer.is_active ? 'Desactivar cliente' : 'Activar cliente'}
+                          >
+                            {customer.is_active ? (
+                              <UserX className="h-3 w-3" />
+                            ) : (
+                              <UserCheck className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleCreditEnabled(customer)}
+                            className={creditEnabled ? 'text-orange-600' : 'text-blue-600'}
+                            title={creditEnabled ? 'Deshabilitar crédito' : 'Habilitar crédito'}
+                          >
+                            {creditEnabled ? (
+                              <ShieldOff className="h-3 w-3" />
+                            ) : (
+                              <ShieldCheck className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

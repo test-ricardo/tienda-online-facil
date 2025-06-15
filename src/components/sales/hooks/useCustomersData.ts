@@ -107,9 +107,10 @@ export const useCustomersData = () => {
       return data;
     },
     onSuccess: (data) => {
+      const isActive = (data as any).is_active ?? false;
       toast({
-        title: data.is_active ? 'Cliente activado' : 'Cliente desactivado',
-        description: `El cliente ha sido ${data.is_active ? 'activado' : 'desactivado'} exitosamente`,
+        title: isActive ? 'Cliente activado' : 'Cliente desactivado',
+        description: `El cliente ha sido ${isActive ? 'activado' : 'desactivado'} exitosamente`,
       });
       queryClient.invalidateQueries({ queryKey: ['customers-management'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -127,7 +128,7 @@ export const useCustomersData = () => {
     mutationFn: async ({ id, creditEnabled }: { id: string; creditEnabled: boolean }) => {
       const { data, error } = await supabase
         .from('customers')
-        .update({ credit_enabled: creditEnabled })
+        .update({ credit_enabled: creditEnabled } as any)
         .eq('id', id)
         .select()
         .single();
@@ -136,9 +137,10 @@ export const useCustomersData = () => {
       return data;
     },
     onSuccess: (data) => {
+      const creditEnabled = (data as any).credit_enabled ?? false;
       toast({
-        title: data.credit_enabled ? 'Crédito habilitado' : 'Crédito deshabilitado',
-        description: `Las ventas a cuenta han sido ${data.credit_enabled ? 'habilitadas' : 'deshabilitadas'} para este cliente`,
+        title: creditEnabled ? 'Crédito habilitado' : 'Crédito deshabilitado',
+        description: `Las ventas a cuenta han sido ${creditEnabled ? 'habilitadas' : 'deshabilitadas'} para este cliente`,
       });
       queryClient.invalidateQueries({ queryKey: ['customers-management'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
