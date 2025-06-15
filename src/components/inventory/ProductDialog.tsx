@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -68,37 +67,44 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     enabled: !!formData.category_id,
   });
 
+  // Reset and load form data when dialog opens or product changes
   useEffect(() => {
-    if (product && open) {
-      setFormData({
-        name: product.name || '',
-        description: product.description || '',
-        sku: product.sku || '',
-        barcode: product.barcode || '',
-        category_id: product.category_id || '',
-        subcategory_id: product.subcategory_id || '',
-        price: product.price?.toString() || '',
-        cost: product.cost?.toString() || '',
-        sell_by_weight: product.sell_by_weight || false,
-        stock_unit: product.stock_unit || 'unit',
-        min_stock: product.min_stock?.toString() || '',
-        max_stock: product.max_stock?.toString() || '',
-      });
-    } else if (!product && open) {
-      setFormData({
-        name: '',
-        description: '',
-        sku: '',
-        barcode: '',
-        category_id: '',
-        subcategory_id: '',
-        price: '',
-        cost: '',
-        sell_by_weight: false,
-        stock_unit: 'unit',
-        min_stock: '',
-        max_stock: '',
-      });
+    console.log('ProductDialog useEffect - open:', open, 'product:', product);
+    
+    if (open) {
+      if (product) {
+        console.log('Loading product data:', product);
+        setFormData({
+          name: product.name || '',
+          description: product.description || '',
+          sku: product.sku || '',
+          barcode: product.barcode || '',
+          category_id: product.category_id || '',
+          subcategory_id: product.subcategory_id || '',
+          price: product.price ? product.price.toString() : '',
+          cost: product.cost ? product.cost.toString() : '',
+          sell_by_weight: Boolean(product.sell_by_weight),
+          stock_unit: product.stock_unit || 'unit',
+          min_stock: product.min_stock ? product.min_stock.toString() : '',
+          max_stock: product.max_stock ? product.max_stock.toString() : '',
+        });
+      } else {
+        console.log('Resetting form for new product');
+        setFormData({
+          name: '',
+          description: '',
+          sku: '',
+          barcode: '',
+          category_id: '',
+          subcategory_id: '',
+          price: '',
+          cost: '',
+          sell_by_weight: false,
+          stock_unit: 'unit',
+          min_stock: '',
+          max_stock: '',
+        });
+      }
     }
   }, [product, open]);
 
