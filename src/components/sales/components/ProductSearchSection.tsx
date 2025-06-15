@@ -17,7 +17,7 @@ interface ProductSearchSectionProps {
   handleSearchKeyPress: (e: React.KeyboardEvent) => void;
   handleTabNavigation: (e: React.KeyboardEvent, nextRef: React.RefObject<any>) => void;
   handleAddProduct: (product: any, quantity?: number) => Promise<void>;
-  handleAddCombo: (combo: any) => Promise<void>;
+  handleAddCombo: (combo: any, quantity?: number) => Promise<void>;
 }
 
 const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
@@ -33,7 +33,14 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
   handleAddProduct,
   handleAddCombo,
 }) => {
-  const showQuantityInput = searchTerm && filteredProducts.length === 1;
+  // Mostrar input de cantidad si hay exactamente un resultado (producto o combo)
+  const showQuantityInput = searchTerm && (
+    (filteredProducts.length === 1 && filteredCombos.length === 0) ||
+    (filteredProducts.length === 0 && filteredCombos.length === 1)
+  );
+
+  const singleItem = filteredProducts.length === 1 ? filteredProducts[0] : 
+                   filteredCombos.length === 1 ? filteredCombos[0] : null;
 
   return (
     <div className="space-y-6">
@@ -56,11 +63,11 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
             />
           </div>
           
-          {/* Input de cantidad para productos cuando hay un resultado exacto */}
-          {showQuantityInput && (
+          {/* Input de cantidad para productos/combos cuando hay un resultado exacto */}
+          {showQuantityInput && singleItem && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
               <label className="block text-sm font-medium text-blue-800 mb-2">
-                Cantidad ({filteredProducts[0].stock_unit}):
+                Cantidad {singleItem.stock_unit ? `(${singleItem.stock_unit})` : ''}:
               </label>
               <Input
                 ref={quantityInputRef}
@@ -74,7 +81,11 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
                   if (e.key === 'Enter') {
                     const quantity = parseFloat((e.target as HTMLInputElement).value) || 1;
                     if (quantity > 0) {
-                      await handleAddProduct(filteredProducts[0], quantity);
+                      if (filteredProducts.length === 1) {
+                        await handleAddProduct(singleItem, quantity);
+                      } else if (filteredCombos.length === 1) {
+                        await handleAddCombo(singleItem, quantity);
+                      }
                       setSearchTerm('');
                       (e.target as HTMLInputElement).value = '';
                       if (searchInputRef.current) {

@@ -22,7 +22,7 @@ export const useCartData = () => {
   const { toast } = useToast();
 
   const addToCart = (item: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
-    console.log('addToCart llamado con:', item.name, 'cantidad:', quantity);
+    console.log('addToCart llamado con:', item.name, 'cantidad:', quantity, 'tipo:', item.type);
     
     const existingItemIndex = cartItems.findIndex(
       cartItem => 
@@ -36,17 +36,22 @@ export const useCartData = () => {
       const maxQuantity = item.maxQuantity || Infinity;
       const newQuantity = currentQuantity + quantity;
 
-      console.log('Producto existente. Cantidad actual:', currentQuantity, 'nueva cantidad:', newQuantity, 'máximo:', maxQuantity);
+      console.log('Item existente. Cantidad actual:', currentQuantity, 'nueva cantidad:', newQuantity, 'máximo:', maxQuantity);
 
       if (newQuantity <= maxQuantity) {
         updatedItems[existingItemIndex].quantity = newQuantity;
+        // Actualizar también maxQuantity por si cambió el stock
+        updatedItems[existingItemIndex].maxQuantity = item.maxQuantity;
         setCartItems(updatedItems);
+        
+        const unitText = item.type === 'combo' ? 'combo(s)' : (item.stock_unit || 'unidad(es)');
         toast({
-          title: 'Producto agregado',
-          description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
+          title: `${item.type === 'combo' ? 'Combo' : 'Producto'} agregado`,
+          description: `${quantity} ${unitText} de ${item.name} agregado al carrito`,
         });
       } else {
         console.log('Stock insuficiente para agregar más');
+        const unitText = item.type === 'combo' ? 'combos' : (item.stock_unit || 'unidades');
         toast({
           title: 'Stock insuficiente',
           description: `No hay suficiente stock de ${item.name}. Stock disponible: ${maxQuantity}, en carrito: ${currentQuantity}`,
@@ -56,19 +61,22 @@ export const useCartData = () => {
     } else {
       const maxQuantity = item.maxQuantity || Infinity;
       
-      console.log('Producto nuevo. Cantidad:', quantity, 'máximo:', maxQuantity);
+      console.log('Item nuevo. Cantidad:', quantity, 'máximo:', maxQuantity, 'tipo:', item.type);
       
       if (quantity <= maxQuantity) {
         setCartItems([...cartItems, { ...item, quantity }]);
+        
+        const unitText = item.type === 'combo' ? 'combo(s)' : (item.stock_unit || 'unidad(es)');
         toast({
-          title: 'Producto agregado',
-          description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
+          title: `${item.type === 'combo' ? 'Combo' : 'Producto'} agregado`,
+          description: `${quantity} ${unitText} de ${item.name} agregado al carrito`,
         });
       } else {
         console.log('Cantidad solicitada excede el stock');
+        const unitText = item.type === 'combo' ? 'combos' : (item.stock_unit || 'unidades');
         toast({
           title: 'Stock insuficiente',
-          description: `Solo hay ${maxQuantity} ${item.stock_unit || 'unidades'} disponibles de ${item.name}`,
+          description: `Solo hay ${maxQuantity} ${unitText} disponibles de ${item.name}`,
           variant: 'destructive',
         });
       }

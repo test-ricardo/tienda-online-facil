@@ -44,6 +44,7 @@ const POSTab = () => {
     isCreatingSale,
     getProductStock,
     checkComboStock,
+    getComboMaxQuantity,
   } = useSalesData();
 
   // Autoenfoque en el buscador al montar el componente
@@ -104,20 +105,39 @@ const POSTab = () => {
     }
   };
 
-  const handleAddCombo = async (combo: any) => {
-    const hasStock = await checkComboStock(combo.id);
-    if (hasStock) {
+  const handleAddCombo = async (combo: any, quantity: number = 1) => {
+    try {
+      const maxComboQuantity = await getComboMaxQuantity(combo.id);
+      console.log('Cantidad máxima de combos disponibles:', maxComboQuantity);
+      
+      // Verificar cuántos combos ya están en el carrito
+      const existingItem = cartItems.find(item => item.id === combo.id && item.type === 'combo');
+      const quantityInCart = existingItem ? existingItem.quantity : 0;
+      const totalRequestedQuantity = quantityInCart + quantity;
+      
+      if (maxComboQuantity < totalRequestedQuantity) {
+        toast({
+          title: 'Stock insuficiente para combo',
+          description: `Solo se pueden formar ${maxComboQuantity} combos con el stock disponible. Ya tienes ${quantityInCart} en el carrito.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       addToCart({
         id: combo.id,
         type: 'combo',
         name: combo.name,
         price: combo.combo_price,
+        maxQuantity: maxComboQuantity,
         comboId: combo.id,
-      });
-    } else {
+      }, quantity);
+      
+    } catch (error) {
+      console.error('Error al verificar stock del combo:', error);
       toast({
-        title: 'Stock insuficiente',
-        description: 'No hay suficiente stock para este combo',
+        title: 'Error',
+        description: 'No se pudo verificar el stock del combo',
         variant: 'destructive',
       });
     }
@@ -140,16 +160,13 @@ const POSTab = () => {
         p.name.toLowerCase() === searchTerm.toLowerCase()
       );
       
-      if (exactProduct) {
+      const exactCombo = filteredCombos.find(c =>
+        c.name.toLowerCase() === searchTerm.toLowerCase()
+      );
+      
+      if (exactProduct || exactCombo || filteredProducts.length === 1 || 
+          (filteredProducts.length === 0 && filteredCombos.length === 1)) {
         // Ir al input de cantidad para que el usuario pueda especificar la cantidad
-        setTimeout(() => {
-          if (quantityInputRef.current) {
-            quantityInputRef.current.focus();
-            quantityInputRef.current.select();
-          }
-        }, 100);
-      } else if (filteredProducts.length === 1) {
-        // Si solo hay un resultado, ir al input de cantidad
         setTimeout(() => {
           if (quantityInputRef.current) {
             quantityInputRef.current.focus();

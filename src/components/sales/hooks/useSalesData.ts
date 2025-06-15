@@ -187,6 +187,30 @@ export const useSalesData = () => {
     return data || false;
   };
 
+  const getComboMaxQuantity = async (comboId: string) => {
+    // Obtener los items del combo
+    const { data: comboItems, error } = await supabase
+      .from('combo_items')
+      .select('product_id, quantity')
+      .eq('combo_id', comboId);
+
+    if (error || !comboItems) {
+      console.error('Error obteniendo items del combo:', error);
+      return 0;
+    }
+
+    let maxCombos = Infinity;
+
+    // Para cada producto en el combo, calcular cuántos combos se pueden formar
+    for (const item of comboItems) {
+      const availableStock = await getProductStock(item.product_id);
+      const combosFromThisProduct = Math.floor(availableStock / item.quantity);
+      maxCombos = Math.min(maxCombos, combosFromThisProduct);
+    }
+
+    return maxCombos === Infinity ? 0 : maxCombos;
+  };
+
   return {
     products,
     combos,
@@ -195,5 +219,6 @@ export const useSalesData = () => {
     isCreatingSale: createSaleMutation.isPending,
     getProductStock,
     checkComboStock,
+    getComboMaxQuantity,
   };
 };
