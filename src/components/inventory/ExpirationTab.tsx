@@ -28,16 +28,47 @@ const ExpirationTab = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('expiration_alerts')
-        .select(`
-          *,
-          categories (name),
-          subcategories (name),
-          products (name)
-        `)
+        .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      
+      // Get related data separately based on alert_type
+      const alertsWithData = await Promise.all(
+        (data || []).map(async (alert) => {
+          let relatedData = null;
+          
+          if (alert.alert_type === 'category') {
+            const { data: categoryData } = await supabase
+              .from('categories')
+              .select('name')
+              .eq('id', alert.reference_id)
+              .single();
+            relatedData = categoryData;
+          } else if (alert.alert_type === 'subcategory') {
+            const { data: subcategoryData } = await supabase
+              .from('subcategories')
+              .select('name')
+              .eq('id', alert.reference_id)
+              .single();
+            relatedData = subcategoryData;
+          } else if (alert.alert_type === 'product') {
+            const { data: productData } = await supabase
+              .from('products')
+              .select('name')
+              .eq('id', alert.reference_id)
+              .single();
+            relatedData = productData;
+          }
+          
+          return {
+            ...alert,
+            relatedData
+          };
+        })
+      );
+      
+      return alertsWithData;
     },
   });
 
@@ -163,9 +194,7 @@ const ExpirationTab = () => {
                 <div key={alert.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                   <div>
                     <div className="font-medium text-sm">
-                      {alert.alert_type === 'category' && alert.categories?.name}
-                      {alert.alert_type === 'subcategory' && alert.subcategories?.name}
-                      {alert.alert_type === 'product' && alert.products?.name}
+                      {alert.relatedData?.name || 'Nombre no disponible'}
                     </div>
                     <div className="text-xs text-gray-500 capitalize">
                       {alert.alert_type === 'category' && 'Categoría'}

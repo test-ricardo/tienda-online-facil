@@ -43,14 +43,30 @@ const ProductsTab = () => {
   const { data: stockData } = useQuery({
     queryKey: ['product-stock'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_product_stock', {});
+      // Get all products and their stock
+      const { data: productsData, error } = await supabase
+        .from('products')
+        .select('id')
+        .eq('is_active', true);
+      
       if (error) throw error;
-      return data;
+      
+      const stockPromises = (productsData || []).map(async (product) => {
+        const { data: stockResult } = await supabase
+          .rpc('get_product_stock', { product_id: product.id });
+        return {
+          product_id: product.id,
+          stock: stockResult || 0
+        };
+      });
+      
+      return Promise.all(stockPromises);
     },
   });
 
   const getProductStock = (productId: string) => {
-    return stockData?.find(s => s.product_id === productId)?.stock || 0;
+    const stockItem = stockData?.find(s => s.product_id === productId);
+    return stockItem?.stock || 0;
   };
 
   const handleEditProduct = (product: any) => {

@@ -11,6 +11,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import StockMovementDialog from './StockMovementDialog';
 
+interface ProductStock {
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    stock_unit: string;
+    min_stock: number;
+    max_stock: number;
+    categories?: { name: string };
+    subcategories?: { name: string };
+  };
+  totalStock: number;
+  lots: any[];
+  expiringSoon: boolean;
+}
+
 const StockTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showMovementDialog, setShowMovementDialog] = useState(false);
@@ -42,7 +58,9 @@ const StockTab = () => {
       if (error) throw error;
 
       // Agrupar por producto y calcular stock total
-      const productStock = data.reduce((acc, item) => {
+      const productStock: Record<string, ProductStock> = (data || []).reduce((acc, item) => {
+        if (!item.products) return acc;
+        
         const productId = item.products.id;
         if (!acc[productId]) {
           acc[productId] = {
@@ -52,7 +70,7 @@ const StockTab = () => {
             expiringSoon: false,
           };
         }
-        acc[productId].totalStock += parseFloat(item.quantity);
+        acc[productId].totalStock += parseFloat(String(item.quantity));
         acc[productId].lots.push(item);
         
         // Verificar si hay lotes próximos a vencer (7 días)
@@ -66,7 +84,7 @@ const StockTab = () => {
         }
         
         return acc;
-      }, {});
+      }, {} as Record<string, ProductStock>);
 
       return Object.values(productStock).filter(item => {
         if (!searchTerm) return true;
@@ -178,7 +196,7 @@ const StockTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {inventory?.map((item: any) => {
+                    {inventory?.map((item: ProductStock) => {
                       const status = getStockStatus(item.product, item.totalStock);
                       
                       return (
@@ -252,7 +270,7 @@ const StockTab = () => {
                         <TrendingDown className="h-4 w-4 text-red-600" />
                       )}
                       <div>
-                        <div className="font-medium text-sm">{movement.products.name}</div>
+                        <div className="font-medium text-sm">{movement.products?.name}</div>
                         <div className="text-xs text-gray-500">
                           {movement.movement_type === 'entry' ? 'Entrada' : 
                            movement.movement_type === 'exit' ? 'Salida' :
@@ -265,7 +283,7 @@ const StockTab = () => {
                       <div className={`font-medium text-sm ${
                         movement.movement_type === 'entry' ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {movement.movement_type === 'entry' ? '+' : '-'}{movement.quantity} {movement.products.stock_unit}
+                        {movement.movement_type === 'entry' ? '+' : '-'}{movement.quantity} {movement.products?.stock_unit}
                       </div>
                       <div className="text-xs text-gray-500">
                         {new Date(movement.created_at).toLocaleDateString()}
