@@ -1,5 +1,5 @@
-
 import { useToast } from '@/hooks/use-toast';
+import { useSalesData } from './useSalesData';
 
 interface UseSaleCompletionProps {
   cartItems: any[];
@@ -17,8 +17,20 @@ export const useSaleCompletion = ({
   searchInputRef,
 }: UseSaleCompletionProps) => {
   const { toast } = useToast();
+  const { isCashRegisterOpen } = useSalesData();
 
-  const handleCompleteSale = () => {
+  const handleCompleteSale = async () => {
+    // Validación de caja abierta ANTES que nada
+    const isOpen = await isCashRegisterOpen?.();
+    if (!isOpen) {
+      toast({
+        title: 'Caja cerrada',
+        description: 'Debes abrir la caja para realizar ventas.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (cartItems.length === 0) {
       toast({
         title: 'Carrito vacío',
@@ -36,7 +48,6 @@ export const useSaleCompletion = ({
       });
       return;
     }
-
     setShowConfirmation(true);
   };
 

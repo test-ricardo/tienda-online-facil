@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -241,6 +240,48 @@ export const useSalesData = () => {
     return maxCombos === Infinity ? 0 : maxCombos;
   };
 
+  // Nueva función para cancelar una venta
+  const cancelSale = async (saleId: string) => {
+    // Obtener la venta actual para revertir inventario o cuenta si fuera necesario
+    const { data: sale, error: fetchError } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('id', saleId)
+      .single();
+    if (fetchError || !sale) throw new Error('No se pudo obtener la venta');
+
+    // Actualizar el estado de la venta
+    const { error: updateError } = await supabase
+      .from('sales')
+      .update({ sale_status: 'cancelled' })
+      .eq('id', saleId);
+
+    if (updateError) throw updateError;
+
+    // Opcional: revertir inventario y cuenta cliente mediante triggers SQL ya existentes
+
+    toast({
+      title: 'Venta cancelada',
+      description: `La venta fue cancelada correctamente`,
+      variant: 'default',
+    });
+
+    queryClient.invalidateQueries({ queryKey: ['sales'] });
+    queryClient.invalidateQueries({ queryKey: ['products-with-stock'] });
+  };
+
+  // Nueva función para verificar que la caja esté abierta
+  const isCashRegisterOpen = async (): Promise<boolean> => {
+    if (!user) return false;
+    const { data: session, error } = await supabase
+      .from('cash_register_sessions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'open')
+      .maybeSingle();
+    return !!session;
+  };
+
   return {
     products,
     combos,
@@ -250,5 +291,7 @@ export const useSalesData = () => {
     getProductStock,
     checkComboStock,
     getComboMaxQuantity,
+    cancelSale,
+    isCashRegisterOpen,
   };
 };
