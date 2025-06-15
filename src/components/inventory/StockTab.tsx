@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +17,7 @@ interface ProductWithStock {
   stock_unit: string;
   min_stock: number;
   max_stock: number;
+  sell_by_weight: boolean;
   categories?: { name: string };
   subcategories?: { name: string };
   totalStock: number;
@@ -129,6 +129,15 @@ const StockTab = () => {
     }
   };
 
+  const formatStockQuantity = (product: ProductWithStock) => {
+    // Mostrar decimales solo si el producto se vende por peso
+    if (product.sell_by_weight) {
+      return product.totalStock.toFixed(3);
+    }
+    // Para productos que no se venden por peso, mostrar como entero
+    return Math.floor(product.totalStock).toString();
+  };
+
   const handleAddMovement = (product: any) => {
     setSelectedProduct(product);
     setShowMovementDialog(true);
@@ -202,7 +211,7 @@ const StockTab = () => {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {product.totalStock.toFixed(3)} {product.stock_unit}
+                              {formatStockQuantity(product)} {product.stock_unit}
                             </div>
                           </TableCell>
                           <TableCell>
