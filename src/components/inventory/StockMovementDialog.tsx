@@ -42,7 +42,7 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
     setLoading(true);
 
     try {
-      // Crear movimiento de stock
+      // Solo crear el movimiento de stock - el trigger se encarga del resto automáticamente
       const { error: movementError } = await supabase
         .from('stock_movements')
         .insert([{
@@ -55,20 +55,29 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
 
       if (movementError) throw movementError;
 
-      // Si es entrada, agregar al inventario directamente
-      if (formData.movement_type === 'entry') {
-        const { error: inventoryError } = await supabase
+      // Para entradas, también podemos actualizar la información adicional en inventario si se proporcionó
+      if (formData.movement_type === 'entry' && 
+          (formData.expiration_date || formData.batch_number || formData.supplier)) {
+        
+        // Buscar la entrada más reciente para este producto para actualizar la información adicional
+        const { data: recentEntry, error: fetchError } = await supabase
           .from('inventory')
-          .insert([{
-            product_id: product.id,
-            quantity: parseFloat(formData.quantity),
-            expiration_date: formData.expiration_date || null,
-            batch_number: formData.batch_number || null,
-            supplier: formData.supplier || null,
-            notes: formData.notes || null,
-          }]);
+          .select('id')
+          .eq('product_id', product.id)
+          .order('entry_date', { ascending: false })
+          .limit(1)
+          .single();
 
-        if (inventoryError) throw inventoryError;
+        if (!fetchError && recentEntry) {
+          await supabase
+            .from('inventory')
+            .update({
+              expiration_date: formData.expiration_date || null,
+              batch_number: formData.batch_number || null,
+              supplier: formData.supplier || null,
+            })
+            .eq('id', recentEntry.id);
+        }
       }
 
       toast({
