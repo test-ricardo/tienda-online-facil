@@ -9,6 +9,89 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cash_counts: {
+        Row: {
+          count: number
+          created_at: string
+          denomination: number
+          id: string
+          session_id: string
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          denomination: number
+          id?: string
+          session_id: string
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          denomination?: number
+          id?: string
+          session_id?: string
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_counts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_sessions: {
+        Row: {
+          closing_amount: number | null
+          created_at: string
+          difference_amount: number | null
+          end_time: string | null
+          expected_amount: number | null
+          id: string
+          notes: string | null
+          opening_amount: number
+          start_time: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closing_amount?: number | null
+          created_at?: string
+          difference_amount?: number | null
+          end_time?: string | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opening_amount?: number
+          start_time?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closing_amount?: number | null
+          created_at?: string
+          difference_amount?: number | null
+          end_time?: string | null
+          expected_amount?: number | null
+          id?: string
+          notes?: string | null
+          opening_amount?: number
+          start_time?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -653,6 +736,10 @@ export type Database = {
       }
       generate_sale_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_active_cash_session: {
+        Args: { user_id_param?: string }
         Returns: string
       }
       get_customer_account_summary: {

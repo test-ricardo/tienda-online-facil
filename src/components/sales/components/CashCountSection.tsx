@@ -10,6 +10,7 @@ interface CashRegisterState {
   currentAmount: number;
   startTime: Date | null;
   endTime: Date | null;
+  sessionId: string | null;
 }
 
 interface CashCountSectionProps {
@@ -26,6 +27,8 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
   calculateTotal,
 }) => {
   const denominations = [
+    { value: 20000, label: '$20000', color: 'bg-amber-100 text-amber-800' },
+    { value: 10000, label: '$10000', color: 'bg-emerald-100 text-emerald-800' },
     { value: 1000, label: '$1000', color: 'bg-purple-100 text-purple-800' },
     { value: 500, label: '$500', color: 'bg-blue-100 text-blue-800' },
     { value: 200, label: '$200', color: 'bg-green-100 text-green-800' },
@@ -46,7 +49,7 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
         </p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
           {denominations.map((denom) => (
             <div key={denom.value} className="space-y-2">
               <Badge className={denom.color} variant="secondary">
@@ -76,7 +79,7 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
                 </Button>
               </div>
               <p className="text-xs text-gray-600 text-center">
-                ${(denom.value * (cashCount[denom.value] || 0)).toFixed(2)}
+                ${(denom.value * (cashCount[denom.value] || 0)).toLocaleString()}
               </p>
             </div>
           ))}
@@ -85,12 +88,12 @@ const CashCountSection: React.FC<CashCountSectionProps> = ({
         <div className="border-t pt-4">
           <div className="flex justify-between items-center text-xl font-bold">
             <span>Total Contado:</span>
-            <span className="text-green-600">${calculateTotal().toFixed(2)}</span>
+            <span className="text-green-600">${calculateTotal().toLocaleString()}</span>
           </div>
           <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
             <span>Diferencia:</span>
             <span className={calculateTotal() >= registerState.currentAmount ? 'text-green-600' : 'text-red-600'}>
-              ${(calculateTotal() - registerState.currentAmount).toFixed(2)}
+              ${(calculateTotal() - registerState.currentAmount).toLocaleString()}
             </span>
           </div>
         </div>
