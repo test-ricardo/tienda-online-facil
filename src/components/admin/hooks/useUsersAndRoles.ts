@@ -3,6 +3,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Define allowed roles
+type AllowedRole = "admin" | "manager" | "cashier" | "inventory";
+
+interface UserProfileWithRoles {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url?: string | null;
+  roles: AllowedRole[];
+}
+
 /**
  * Hook para listar usuarios y roles, y mutar roles.
  */
@@ -13,8 +24,7 @@ export const useUsersAndRoles = () => {
   // Listar todos los usuarios con sus perfiles y roles
   const { data: users, isLoading } = useQuery({
     queryKey: ['all-users'],
-    queryFn: async () => {
-      // Buscar perfiles (id, email, nombre, avatar)
+    queryFn: async (): Promise<UserProfileWithRoles[]> => {
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, full_name, avatar_url')
@@ -22,26 +32,24 @@ export const useUsersAndRoles = () => {
 
       if (profileError) throw profileError;
 
-      // Traer los roles de cada usuario
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Construir resultado combinando
       return profiles.map(profile => ({
         ...profile,
         roles: roles
-          .filter(r => r.user_id === profile.id)
-          .map(r => r.role),
+          .filter((r: any) => r.user_id === profile.id)
+          .map((r: any) => r.role as AllowedRole),
       }));
     },
   });
 
   // Mutación para agregar rol
   const addRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: AllowedRole }) => {
       const { error } = await supabase
         .from('user_roles')
         .insert([{ user_id: userId, role }]);
@@ -58,7 +66,7 @@ export const useUsersAndRoles = () => {
 
   // Mutación para quitar rol
   const removeRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: AllowedRole }) => {
       const { error } = await supabase
         .from('user_roles')
         .delete()
@@ -78,7 +86,7 @@ export const useUsersAndRoles = () => {
   return {
     users,
     isLoading,
-    addRole: addRoleMutation.mutateAsync,
-    removeRole: removeRoleMutation.mutateAsync,
+    addRole: (args: { userId: string, role: AllowedRole }) => addRoleMutation.mutateAsync(args),
+    removeRole: (args: { userId: string, role: AllowedRole }) => removeRoleMutation.mutateAsync(args),
   };
 };

@@ -8,12 +8,14 @@ const ALL_ROLES = [
   { value: 'manager', label: 'Manager' },
   { value: 'cashier', label: 'Caja' },
   { value: 'inventory', label: 'Inventario' },
-];
+] as const;
+
+type RoleValue = typeof ALL_ROLES[number]["value"];
 
 interface Props {
-  roles: string[];
-  onAdd: (role: string) => void;
-  onRemove: (role: string) => void;
+  roles: RoleValue[];
+  onAdd: (role: RoleValue) => void;
+  onRemove: (role: RoleValue) => void;
   disabled?: boolean;
 }
 
@@ -21,11 +23,11 @@ export const UserRoleSelector: React.FC<Props> = ({ roles, onAdd, onRemove, disa
   <div className="flex flex-wrap gap-2">
     {ALL_ROLES.map(r => (
       roles.includes(r.value) ? (
-        <Badge key={r.value} variant="default" className="bg-green-500">
+        <Badge key={r.value} variant="default" className="bg-green-500 flex items-center">
           {r.label}
           <Button
             variant="ghost"
-            size="xs"
+            size="sm"
             onClick={() => onRemove(r.value)}
             disabled={disabled || r.value === 'admin'} // Admin solo removible por otro admin
             className="ml-1 text-xs px-1 py-0"
@@ -36,7 +38,7 @@ export const UserRoleSelector: React.FC<Props> = ({ roles, onAdd, onRemove, disa
         <Button
           key={r.value}
           variant="outline"
-          size="xs"
+          size="sm"
           onClick={() => onAdd(r.value)}
           disabled={disabled}
           className="text-xs"

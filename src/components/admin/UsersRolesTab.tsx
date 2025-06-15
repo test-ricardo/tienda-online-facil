@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useUsersAndRoles } from "./hooks/useUsersAndRoles";
 import { UserRoleSelector } from "./UserRoleSelector";
@@ -38,7 +37,7 @@ export const UsersRolesTab: React.FC = () => {
             </div>
             <UserRoleSelector
               roles={u.roles}
-              disabled={currentUser?.id === u.id} // El usuario actual no puede editarse sus propios roles
+              disabled={currentUser?.id === u.id}
               onAdd={(role) => addRole({ userId: u.id, role })}
               onRemove={(role) => removeRole({ userId: u.id, role })}
             />
