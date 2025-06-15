@@ -69,6 +69,101 @@ export type Database = {
           },
         ]
       }
+      customer_account_movements: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          created_by: string
+          customer_id: string
+          description: string
+          id: string
+          movement_type: string
+          reference_id: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          created_by: string
+          customer_id: string
+          description: string
+          id?: string
+          movement_type: string
+          reference_id?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          description?: string
+          id?: string
+          movement_type?: string
+          reference_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_account_movements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          credit_limit: number
+          current_balance: number
+          customer_code: string
+          document_number: string | null
+          document_type: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          credit_limit?: number
+          current_balance?: number
+          customer_code: string
+          document_number?: string | null
+          document_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          credit_limit?: number
+          current_balance?: number
+          customer_code?: string
+          document_number?: string | null
+          document_type?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expiration_alerts: {
         Row: {
           alert_type: string
@@ -275,6 +370,170 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_items: {
+        Row: {
+          combo_id: string | null
+          created_at: string
+          id: string
+          item_name: string
+          product_id: string | null
+          quantity: number
+          sale_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          combo_id?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          product_id?: string | null
+          quantity?: number
+          sale_id: string
+          total_price?: number
+          unit_price?: number
+        }
+        Update: {
+          combo_id?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          product_id?: string | null
+          quantity?: number
+          sale_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "product_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_method: string
+          reference: string | null
+          sale_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method: string
+          reference?: string | null
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          reference?: string | null
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          discount_amount: number
+          id: string
+          notes: string | null
+          paid_amount: number
+          payment_method: string
+          payment_status: string
+          pending_amount: number
+          sale_number: string
+          sale_status: string
+          subtotal: number
+          tax_amount: number
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          discount_amount?: number
+          id?: string
+          notes?: string | null
+          paid_amount?: number
+          payment_method?: string
+          payment_status?: string
+          pending_amount?: number
+          sale_number: string
+          sale_status?: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          discount_amount?: number
+          id?: string
+          notes?: string | null
+          paid_amount?: number
+          payment_method?: string
+          payment_status?: string
+          pending_amount?: number
+          sale_number?: string
+          sale_status?: string
+          subtotal?: number
+          tax_amount?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -380,9 +639,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_customer_buy_on_account: {
+        Args: { customer_id: string; sale_amount: number }
+        Returns: boolean
+      }
       combo_has_stock: {
         Args: { combo_id: string }
         Returns: boolean
+      }
+      generate_customer_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_sale_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_customer_account_summary: {
+        Args: { customer_id: string }
+        Returns: {
+          total_sales: number
+          total_payments: number
+          current_balance: number
+          credit_limit: number
+          available_credit: number
+        }[]
       }
       get_expiring_products: {
         Args: { days_ahead?: number }
