@@ -22,6 +22,8 @@ export const useCartData = () => {
   const { toast } = useToast();
 
   const addToCart = (item: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
+    console.log('addToCart llamado con:', item.name, 'cantidad:', quantity);
+    
     const existingItemIndex = cartItems.findIndex(
       cartItem => 
         cartItem.id === item.id && 
@@ -34,6 +36,8 @@ export const useCartData = () => {
       const maxQuantity = item.maxQuantity || Infinity;
       const newQuantity = currentQuantity + quantity;
 
+      console.log('Producto existente. Cantidad actual:', currentQuantity, 'nueva cantidad:', newQuantity, 'máximo:', maxQuantity);
+
       if (newQuantity <= maxQuantity) {
         updatedItems[existingItemIndex].quantity = newQuantity;
         setCartItems(updatedItems);
@@ -42,18 +46,32 @@ export const useCartData = () => {
           description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
         });
       } else {
+        console.log('Stock insuficiente para agregar más');
         toast({
           title: 'Stock insuficiente',
-          description: `No hay suficiente stock de ${item.name}`,
+          description: `No hay suficiente stock de ${item.name}. Stock disponible: ${maxQuantity}, en carrito: ${currentQuantity}`,
           variant: 'destructive',
         });
       }
     } else {
-      setCartItems([...cartItems, { ...item, quantity }]);
-      toast({
-        title: 'Producto agregado',
-        description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
-      });
+      const maxQuantity = item.maxQuantity || Infinity;
+      
+      console.log('Producto nuevo. Cantidad:', quantity, 'máximo:', maxQuantity);
+      
+      if (quantity <= maxQuantity) {
+        setCartItems([...cartItems, { ...item, quantity }]);
+        toast({
+          title: 'Producto agregado',
+          description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
+        });
+      } else {
+        console.log('Cantidad solicitada excede el stock');
+        toast({
+          title: 'Stock insuficiente',
+          description: `Solo hay ${maxQuantity} ${item.stock_unit || 'unidades'} disponibles de ${item.name}`,
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -64,11 +82,23 @@ export const useCartData = () => {
     }
 
     setCartItems(items =>
-      items.map(item =>
-        item.id === itemId && item.type === itemType
-          ? { ...item, quantity: Math.min(newQuantity, item.maxQuantity || Infinity) }
-          : item
-      )
+      items.map(item => {
+        if (item.id === itemId && item.type === itemType) {
+          const maxQuantity = item.maxQuantity || Infinity;
+          const finalQuantity = Math.min(newQuantity, maxQuantity);
+          
+          if (finalQuantity < newQuantity) {
+            toast({
+              title: 'Cantidad ajustada',
+              description: `Cantidad ajustada a ${finalQuantity} por stock disponible`,
+              variant: 'destructive',
+            });
+          }
+          
+          return { ...item, quantity: finalQuantity };
+        }
+        return item;
+      })
     );
   };
 

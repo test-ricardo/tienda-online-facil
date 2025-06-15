@@ -64,21 +64,41 @@ const POSTab = () => {
   ) || [];
 
   const handleAddProduct = async (product: any, quantity: number = 1) => {
-    const stock = await getProductStock(product.id);
-    if (stock >= quantity) {
+    console.log('Agregando producto:', product.name, 'cantidad:', quantity);
+    
+    try {
+      const currentStock = await getProductStock(product.id);
+      console.log('Stock disponible:', currentStock);
+      
+      // Verificar stock actual en el carrito
+      const existingItem = cartItems.find(item => item.id === product.id && item.type === 'product');
+      const quantityInCart = existingItem ? existingItem.quantity : 0;
+      const totalRequestedQuantity = quantityInCart + quantity;
+      
+      if (currentStock < totalRequestedQuantity) {
+        toast({
+          title: 'Stock insuficiente',
+          description: `Solo hay ${currentStock} disponibles. Ya tienes ${quantityInCart} en el carrito.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       addToCart({
         id: product.id,
         type: 'product',
         name: product.name,
         price: product.price,
-        maxQuantity: stock,
+        maxQuantity: currentStock,
         stock_unit: product.stock_unit,
         productId: product.id,
       }, quantity);
-    } else {
+      
+    } catch (error) {
+      console.error('Error al verificar stock:', error);
       toast({
-        title: 'Stock insuficiente',
-        description: `Solo hay ${stock} unidades disponibles`,
+        title: 'Error',
+        description: 'No se pudo verificar el stock del producto',
         variant: 'destructive',
       });
     }
@@ -121,26 +141,21 @@ const POSTab = () => {
       );
       
       if (exactProduct) {
-        // Si el producto es fraccionable, ir al input de cantidad
-        if (exactProduct.sell_by_weight || exactProduct.stock_unit !== 'unit') {
-          setTimeout(() => {
-            if (quantityInputRef.current) {
-              quantityInputRef.current.focus();
-              quantityInputRef.current.select();
-            }
-          }, 100);
-        } else {
-          // Agregar directamente si es producto unitario
-          await handleAddProduct(exactProduct);
-          setSearchTerm('');
-          if (searchInputRef.current) {
-            searchInputRef.current.focus();
+        // Ir al input de cantidad para que el usuario pueda especificar la cantidad
+        setTimeout(() => {
+          if (quantityInputRef.current) {
+            quantityInputRef.current.focus();
+            quantityInputRef.current.select();
           }
-        }
+        }, 100);
       } else if (filteredProducts.length === 1) {
-        // Si solo hay un resultado, agregarlo
-        await handleAddProduct(filteredProducts[0]);
-        setSearchTerm('');
+        // Si solo hay un resultado, ir al input de cantidad
+        setTimeout(() => {
+          if (quantityInputRef.current) {
+            quantityInputRef.current.focus();
+            quantityInputRef.current.select();
+          }
+        }, 100);
       }
     }
   };

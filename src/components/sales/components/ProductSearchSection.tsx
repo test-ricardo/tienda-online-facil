@@ -33,6 +33,8 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
   handleAddProduct,
   handleAddCombo,
 }) => {
+  const showQuantityInput = searchTerm && filteredProducts.length === 1;
+
   return (
     <div className="space-y-6">
       {/* Search */}
@@ -54,8 +56,8 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
             />
           </div>
           
-          {/* Input de cantidad para productos fraccionables */}
-          {searchTerm && filteredProducts.length === 1 && (filteredProducts[0].sell_by_weight || filteredProducts[0].stock_unit !== 'unit') && (
+          {/* Input de cantidad para productos cuando hay un resultado exacto */}
+          {showQuantityInput && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
               <label className="block text-sm font-medium text-blue-800 mb-2">
                 Cantidad ({filteredProducts[0].stock_unit}):
@@ -65,11 +67,12 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
                 type="number"
                 step="0.01"
                 min="0.01"
-                placeholder="Ingresa la cantidad"
+                placeholder="1"
+                defaultValue="1"
                 className="w-32"
                 onKeyPress={async (e) => {
                   if (e.key === 'Enter') {
-                    const quantity = parseFloat((e.target as HTMLInputElement).value);
+                    const quantity = parseFloat((e.target as HTMLInputElement).value) || 1;
                     if (quantity > 0) {
                       await handleAddProduct(filteredProducts[0], quantity);
                       setSearchTerm('');
