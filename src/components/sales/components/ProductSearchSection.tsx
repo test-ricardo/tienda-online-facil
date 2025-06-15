@@ -55,7 +55,7 @@ const ProductSearchSection: React.FC<ProductSearchSectionProps> = ({
           </div>
           
           {/* Input de cantidad para productos fraccionables */}
-          {filteredProducts.length === 1 && (filteredProducts[0].sell_by_weight || filteredProducts[0].stock_unit !== 'unit') && (
+          {searchTerm && filteredProducts.length === 1 && (filteredProducts[0].sell_by_weight || filteredProducts[0].stock_unit !== 'unit') && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
               <label className="block text-sm font-medium text-blue-800 mb-2">
                 Cantidad ({filteredProducts[0].stock_unit}):

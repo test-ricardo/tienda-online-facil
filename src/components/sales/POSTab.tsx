@@ -108,6 +108,11 @@ const POSTab = () => {
     if (e.key === 'Enter') {
       e.preventDefault();
       
+      // No hacer nada si no hay término de búsqueda
+      if (!searchTerm.trim()) {
+        return;
+      }
+      
       // Buscar producto exacto por código de barras, SKU o nombre
       const exactProduct = filteredProducts.find(p => 
         p.barcode === searchTerm || 
@@ -118,7 +123,6 @@ const POSTab = () => {
       if (exactProduct) {
         // Si el producto es fraccionable, ir al input de cantidad
         if (exactProduct.sell_by_weight || exactProduct.stock_unit !== 'unit') {
-          setSearchTerm('');
           setTimeout(() => {
             if (quantityInputRef.current) {
               quantityInputRef.current.focus();

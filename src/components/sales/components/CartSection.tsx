@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ShoppingCart, Plus, Minus, X } from 'lucide-react';
 
 interface CartItem {
@@ -38,6 +39,13 @@ const CartSection: React.FC<CartSectionProps> = ({
   handleCompleteSale,
   isCreatingSale,
 }) => {
+  const handleQuantityChange = (item: CartItem, value: string) => {
+    const quantity = parseFloat(value);
+    if (!isNaN(quantity) && quantity > 0) {
+      updateQuantity(item.id, item.type, quantity);
+    }
+  };
+
   return (
     <Card className="border-2 border-blue-200">
       <CardHeader className="bg-blue-50">
@@ -64,9 +72,14 @@ const CartSection: React.FC<CartSectionProps> = ({
                 >
                   <Minus className="h-3 w-3" />
                 </Button>
-                <span className="text-sm font-bold w-12 text-center bg-gray-100 py-1 rounded">
-                  {item.quantity}
-                </span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={item.quantity}
+                  onChange={(e) => handleQuantityChange(item, e.target.value)}
+                  className="w-16 h-7 text-center text-sm font-bold"
+                />
                 <Button
                   size="sm"
                   variant="outline"
