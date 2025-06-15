@@ -42,47 +42,99 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
     setLoading(true);
 
     try {
-      // Solo crear el movimiento de stock - el trigger se encarga del resto automáticamente
+      let actualMovementType = formData.movement_type;
+      let actualQuantity = parseFloat(formData.quantity);
+
+      // Para ajustes, calcular la diferencia con el stock actual
+      if (formData.movement_type === 'adjustment') {
+        // Obtener stock actual
+        const { data: currentStock } = await supabase
+          .rpc('get_product_stock', { product_id: product.id });
+
+        const targetStock = parseFloat(formData.quantity);
+        const stockDifference = targetStock - (currentStock || 0);
+
+        if (stockDifference === 0) {
+          toast({
+            title: 'Sin cambios',
+            description: 'El stock ya está en el valor indicado.',
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Determinar el tipo de movimiento y cantidad real
+        if (stockDifference > 0) {
+          actualMovementType = 'entry';
+          actualQuantity = stockDifference;
+        } else {
+          actualMovementType = 'exit';
+          actualQuantity = Math.abs(stockDifference);
+        }
+      }
+
+      // Crear el movimiento de stock
       const { error: movementError } = await supabase
         .from('stock_movements')
         .insert([{
           product_id: product.id,
-          movement_type: formData.movement_type,
-          quantity: parseFloat(formData.quantity),
-          notes: formData.notes || null,
+          movement_type: formData.movement_type, // Mantener el tipo original para el registro
+          quantity: parseFloat(formData.quantity), // Mantener la cantidad original para el registro
+          notes: formData.movement_type === 'adjustment' 
+            ? `Ajuste de stock a ${formData.quantity} ${product.stock_unit}. ${formData.notes || ''}`.trim()
+            : formData.notes || null,
           created_by: user.id,
         }]);
 
       if (movementError) throw movementError;
 
-      // Para entradas, también podemos actualizar la información adicional en inventario si se proporcionó
-      if (formData.movement_type === 'entry' && 
-          (formData.expiration_date || formData.batch_number || formData.supplier)) {
-        
-        // Buscar la entrada más reciente para este producto para actualizar la información adicional
-        const { data: recentEntry, error: fetchError } = await supabase
+      // Aplicar el movimiento real al inventario
+      if (actualMovementType === 'entry' && actualQuantity > 0) {
+        const { error: inventoryError } = await supabase
           .from('inventory')
-          .select('id')
-          .eq('product_id', product.id)
-          .order('entry_date', { ascending: false })
-          .limit(1)
-          .single();
+          .insert([{
+            product_id: product.id,
+            quantity: actualQuantity,
+            expiration_date: formData.expiration_date || null,
+            batch_number: formData.batch_number || null,
+            supplier: formData.supplier || null,
+            notes: formData.movement_type === 'adjustment' ? 'Ajuste de inventario' : formData.notes || null,
+          }]);
 
-        if (!fetchError && recentEntry) {
-          await supabase
-            .from('inventory')
-            .update({
-              expiration_date: formData.expiration_date || null,
-              batch_number: formData.batch_number || null,
-              supplier: formData.supplier || null,
-            })
-            .eq('id', recentEntry.id);
+        if (inventoryError) throw inventoryError;
+      } else if (actualMovementType === 'exit' && actualQuantity > 0) {
+        // Para salidas, usar FIFO para reducir del inventario
+        const { data: availableStock } = await supabase
+          .from('inventory')
+          .select('id, quantity')
+          .eq('product_id', product.id)
+          .gt('quantity', 0)
+          .order('entry_date')
+          .order('id');
+
+        if (availableStock) {
+          let remainingToReduce = actualQuantity;
+          
+          for (const stockItem of availableStock) {
+            if (remainingToReduce <= 0) break;
+            
+            const reductionAmount = Math.min(stockItem.quantity, remainingToReduce);
+            
+            await supabase
+              .from('inventory')
+              .update({ quantity: stockItem.quantity - reductionAmount })
+              .eq('id', stockItem.id);
+            
+            remainingToReduce -= reductionAmount;
+          }
         }
       }
 
       toast({
         title: 'Movimiento registrado',
-        description: 'El movimiento de stock se ha registrado correctamente.',
+        description: formData.movement_type === 'adjustment' 
+          ? `Stock ajustado a ${formData.quantity} ${product.stock_unit}`
+          : 'El movimiento de stock se ha registrado correctamente.',
       });
 
       setFormData({
@@ -120,6 +172,11 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
           <DialogTitle>Movimiento de Stock</DialogTitle>
           <DialogDescription>
             Registrar movimiento para: {product?.name}
+            {product?.totalStock !== undefined && (
+              <div className="mt-1 text-sm text-gray-600">
+                Stock actual: {product.totalStock.toFixed(3)} {product.stock_unit}
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -144,7 +201,9 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quantity">Cantidad *</Label>
+              <Label htmlFor="quantity">
+                {formData.movement_type === 'adjustment' ? 'Stock Final Deseado *' : 'Cantidad *'}
+              </Label>
               <Input
                 id="quantity"
                 type="number"
@@ -152,11 +211,12 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
                 value={formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 required
+                placeholder={formData.movement_type === 'adjustment' ? 'Ej: 10.5' : ''}
               />
             </div>
           </div>
 
-          {formData.movement_type === 'entry' && (
+          {(formData.movement_type === 'entry' || formData.movement_type === 'adjustment') && (
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -194,7 +254,11 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
               id="notes"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Observaciones adicionales..."
+              placeholder={
+                formData.movement_type === 'adjustment' 
+                  ? 'Motivo del ajuste...'
+                  : 'Observaciones adicionales...'
+              }
             />
           </div>
 
