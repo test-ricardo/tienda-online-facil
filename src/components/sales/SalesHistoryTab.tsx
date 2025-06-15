@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,18 +24,66 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Eye, FileText, CreditCard, Calendar, DollarSign } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Search, Eye, FileText, CreditCard, Calendar, DollarSign, X } from 'lucide-react';
 import { useSalesHistoryData } from './hooks/useSalesHistoryData';
+import { useSalesData } from './hooks/useSalesData';
 
 const SalesHistoryTab = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [saleToCancel, setSaleToCancel] = useState<any>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   
-  const { sales, salesSummary, isLoading, filters, setFilters } = useSalesHistoryData();
+  const { sales, salesSummary, isLoading, filters, setFilters, refetchSales } = useSalesHistoryData();
+  const { cancelSale } = useSalesData();
 
   const handleViewDetails = (sale: any) => {
     setSelectedSale(sale);
     setShowDetails(true);
+  };
+
+  const handleCancelSale = (sale: any) => {
+    setSaleToCancel(sale);
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancelSale = async () => {
+    if (saleToCancel) {
+      try {
+        await cancelSale(saleToCancel.id);
+        setShowCancelDialog(false);
+        setSaleToCancel(null);
+        refetchSales();
+      } catch (error) {
+        console.error('Error al cancelar venta:', error);
+      }
+    }
+  };
+
+  const canCancelSale = (sale: any) => {
+    // Solo permitir cancelar ventas de efectivo, tarjeta o transferencia
+    const allowedMethods = ['cash', 'card', 'transfer'];
+    if (!allowedMethods.includes(sale.payment_method)) return false;
+    
+    // Solo permitir cancelar ventas del día actual
+    const saleDate = new Date(sale.created_at);
+    const today = new Date();
+    const isToday = saleDate.toDateString() === today.toDateString();
+    
+    // Solo permitir cancelar si no está ya cancelada
+    const isNotCancelled = sale.sale_status !== 'cancelled';
+    
+    return isToday && isNotCancelled;
   };
 
   const getPaymentMethodBadge = (method: string) => {
@@ -59,6 +106,17 @@ const SalesHistoryTab = () => {
     return (
       <Badge variant={variants[method] || 'default'}>
         {labels[method] || method}
+      </Badge>
+    );
+  };
+
+  const getSaleStatusBadge = (sale: any) => {
+    if (sale.sale_status === 'cancelled') {
+      return <Badge variant="destructive">Cancelada</Badge>;
+    }
+    return (
+      <Badge variant={sale.payment_status === 'paid' ? 'default' : 'destructive'}>
+        {sale.payment_status === 'paid' ? 'Pagado' : 'Pendiente'}
       </Badge>
     );
   };
@@ -233,18 +291,27 @@ const SalesHistoryTab = () => {
                       {getPaymentMethodBadge(sale.payment_method)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={sale.payment_status === 'paid' ? 'default' : 'destructive'}>
-                        {sale.payment_status === 'paid' ? 'Pagado' : 'Pendiente'}
-                      </Badge>
+                      {getSaleStatusBadge(sale)}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(sale)}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(sale)}
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        {canCancelSale(sale) && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleCancelSale(sale)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -275,6 +342,12 @@ const SalesHistoryTab = () => {
                 <div>
                   <strong>Método de Pago:</strong> {selectedSale.payment_method}
                 </div>
+                {selectedSale.sale_status === 'cancelled' && (
+                  <div className="col-span-2">
+                    <strong className="text-red-600">Estado:</strong> 
+                    <span className="text-red-600 font-medium ml-2">VENTA CANCELADA</span>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -321,6 +394,31 @@ const SalesHistoryTab = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de confirmación de cancelación */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cancelar Venta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción cancelará la venta {saleToCancel?.sale_number} por un total de ${saleToCancel?.total_amount.toFixed(2)}.
+              <br /><br />
+              <strong>Esta acción:</strong>
+              <ul className="list-disc list-inside mt-2 text-sm">
+                <li>Marcará la venta como cancelada</li>
+                <li>Restaurará el inventario de los productos vendidos</li>
+                <li>No se puede deshacer</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, mantener venta</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancelSale} className="bg-red-600 hover:bg-red-700">
+              Sí, cancelar venta
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

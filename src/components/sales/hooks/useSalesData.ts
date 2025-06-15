@@ -173,7 +173,6 @@ export const useSalesData = () => {
         const payments = saleData.payments.map(payment => ({
           sale_id: sale.id,
           payment_method: payment.payment_method,
-          amount: payment.amount,
           reference: payment.reference,
           notes: payment.notes,
         }));
@@ -240,35 +239,71 @@ export const useSalesData = () => {
     return maxCombos === Infinity ? 0 : maxCombos;
   };
 
-  // Nueva función para cancelar una venta
-  const cancelSale = async (saleId: string) => {
-    // Obtener la venta actual para revertir inventario o cuenta si fuera necesario
-    const { data: sale, error: fetchError } = await supabase
-      .from('sales')
-      .select('*')
-      .eq('id', saleId)
-      .single();
-    if (fetchError || !sale) throw new Error('No se pudo obtener la venta');
+  // Función mejorada para cancelar una venta con validaciones
+  const cancelSaleMutation = useMutation({
+    mutationFn: async (saleId: string) => {
+      // Obtener la venta actual
+      const { data: sale, error: fetchError } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          sale_items (*)
+        `)
+        .eq('id', saleId)
+        .single();
+        
+      if (fetchError || !sale) {
+        throw new Error('No se pudo obtener la venta');
+      }
 
-    // Actualizar el estado de la venta
-    const { error: updateError } = await supabase
-      .from('sales')
-      .update({ sale_status: 'cancelled' })
-      .eq('id', saleId);
+      // Validar que se puede cancelar
+      const saleDate = new Date(sale.created_at);
+      const today = new Date();
+      const isToday = saleDate.toDateString() === today.toDateString();
+      
+      if (!isToday) {
+        throw new Error('Solo se pueden cancelar ventas del día actual');
+      }
 
-    if (updateError) throw updateError;
+      if (sale.sale_status === 'cancelled') {
+        throw new Error('Esta venta ya está cancelada');
+      }
 
-    // Opcional: revertir inventario y cuenta cliente mediante triggers SQL ya existentes
+      const allowedMethods = ['cash', 'card', 'transfer'];
+      if (!allowedMethods.includes(sale.payment_method)) {
+        throw new Error('No se pueden cancelar ventas a cuenta o métodos mixtos');
+      }
 
-    toast({
-      title: 'Venta cancelada',
-      description: `La venta fue cancelada correctamente`,
-      variant: 'default',
-    });
+      // Actualizar el estado de la venta
+      const { error: updateError } = await supabase
+        .from('sales')
+        .update({ 
+          sale_status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', saleId);
 
-    queryClient.invalidateQueries({ queryKey: ['sales'] });
-    queryClient.invalidateQueries({ queryKey: ['products-with-stock'] });
-  };
+      if (updateError) throw updateError;
+
+      return sale;
+    },
+    onSuccess: (sale) => {
+      toast({
+        title: 'Venta cancelada',
+        description: `La venta ${sale.sale_number} fue cancelada correctamente`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-history'] });
+      queryClient.invalidateQueries({ queryKey: ['products-with-stock'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error al cancelar venta',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   // Nueva función para verificar que la caja esté abierta
   const isCashRegisterOpen = async (): Promise<boolean> => {
@@ -291,7 +326,8 @@ export const useSalesData = () => {
     getProductStock,
     checkComboStock,
     getComboMaxQuantity,
-    cancelSale,
+    cancelSale: cancelSaleMutation.mutateAsync,
+    isCancelingSale: cancelSaleMutation.isPending,
     isCashRegisterOpen,
   };
 };
