@@ -21,7 +21,7 @@ export const useCartData = () => {
   const [discount, setDiscount] = useState<number>(0);
   const { toast } = useToast();
 
-  const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+  const addToCart = (item: Omit<CartItem, 'quantity'>, quantity: number = 1) => {
     const existingItemIndex = cartItems.findIndex(
       cartItem => 
         cartItem.id === item.id && 
@@ -32,13 +32,14 @@ export const useCartData = () => {
       const updatedItems = [...cartItems];
       const currentQuantity = updatedItems[existingItemIndex].quantity;
       const maxQuantity = item.maxQuantity || Infinity;
+      const newQuantity = currentQuantity + quantity;
 
-      if (currentQuantity < maxQuantity) {
-        updatedItems[existingItemIndex].quantity += 1;
+      if (newQuantity <= maxQuantity) {
+        updatedItems[existingItemIndex].quantity = newQuantity;
         setCartItems(updatedItems);
         toast({
           title: 'Producto agregado',
-          description: `${item.name} agregado al carrito`,
+          description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
         });
       } else {
         toast({
@@ -48,10 +49,10 @@ export const useCartData = () => {
         });
       }
     } else {
-      setCartItems([...cartItems, { ...item, quantity: 1 }]);
+      setCartItems([...cartItems, { ...item, quantity }]);
       toast({
         title: 'Producto agregado',
-        description: `${item.name} agregado al carrito`,
+        description: `${quantity} ${item.stock_unit || 'unidad(es)'} de ${item.name} agregado al carrito`,
       });
     }
   };
@@ -75,6 +76,10 @@ export const useCartData = () => {
     setCartItems(items =>
       items.filter(item => !(item.id === itemId && item.type === itemType))
     );
+    toast({
+      title: 'Producto eliminado',
+      description: 'El producto ha sido eliminado del carrito',
+    });
   };
 
   const clearCart = () => {
@@ -82,6 +87,10 @@ export const useCartData = () => {
     setCustomerSelected(null);
     setPaymentMethod('cash');
     setDiscount(0);
+    toast({
+      title: 'Carrito limpiado',
+      description: 'Todos los productos han sido eliminados del carrito',
+    });
   };
 
   const getSubtotal = () => {
