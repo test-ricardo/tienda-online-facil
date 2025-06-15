@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, TrendingUp, TrendingDown, Calculator, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Calculator, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface CashRegisterDialogProps {
@@ -15,12 +15,24 @@ interface CashRegisterDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CashRegisterState {
+  isOpen: boolean;
+  currentAmount: number;
+  startTime: Date | null;
+  endTime: Date | null;
+}
+
 const CashRegisterDialog: React.FC<CashRegisterDialogProps> = ({
   open,
   onOpenChange,
 }) => {
   const [initialAmount, setInitialAmount] = useState('');
-  const [currentAmount, setCurrentAmount] = useState(1500); // Ejemplo
+  const [registerState, setRegisterState] = useState<CashRegisterState>({
+    isOpen: false,
+    currentAmount: 0,
+    startTime: null,
+    endTime: null,
+  });
   const [denomination, setDenomination] = useState('');
   const [quantity, setQuantity] = useState('');
   const { toast } = useToast();
@@ -38,16 +50,25 @@ const CashRegisterDialog: React.FC<CashRegisterDialogProps> = ({
   ];
 
   const [cashCount, setCashCount] = useState<{[key: number]: number}>({
-    1000: 2,
-    500: 3,
-    200: 5,
-    100: 10,
-    50: 8,
-    20: 15,
-    10: 20,
-    5: 10,
-    1: 25,
+    1000: 0,
+    500: 0,
+    200: 0,
+    100: 0,
+    50: 0,
+    20: 0,
+    10: 0,
+    5: 0,
+    1: 0,
   });
+
+  // Simular datos de ventas (en una implementación real vendrían de la base de datos)
+  const salesData = {
+    todaySales: 2450.75,
+    totalTransactions: 45,
+    cashSales: 1890.50,
+    cardSales: 560.25,
+    averageTicket: 54.46,
+  };
 
   const calculateTotal = () => {
     return Object.entries(cashCount).reduce((total, [value, count]) => {
@@ -65,28 +86,55 @@ const CashRegisterDialog: React.FC<CashRegisterDialogProps> = ({
   const handleOpenRegister = () => {
     const amount = parseFloat(initialAmount);
     if (amount > 0) {
-      setCurrentAmount(amount);
+      const now = new Date();
+      setRegisterState({
+        isOpen: true,
+        currentAmount: amount,
+        startTime: now,
+        endTime: null,
+      });
+      setInitialAmount('');
       toast({
         title: 'Caja abierta',
-        description: `Caja iniciada con $${amount.toFixed(2)}`,
+        description: `Caja iniciada con $${amount.toFixed(2)} a las ${now.toLocaleTimeString()}`,
+      });
+    } else {
+      toast({
+        title: 'Monto inválido',
+        description: 'Ingresa un monto inicial válido',
+        variant: 'destructive',
       });
     }
   };
 
   const handleCloseRegister = () => {
     const total = calculateTotal();
+    const now = new Date();
+    setRegisterState(prev => ({
+      ...prev,
+      isOpen: false,
+      endTime: now,
+    }));
+    
+    const difference = total - registerState.currentAmount;
     toast({
-      title: 'Arqueo de caja',
-      description: `Total contado: $${total.toFixed(2)}`,
+      title: 'Caja cerrada',
+      description: `Arqueo completado. Total contado: $${total.toFixed(2)}. Diferencia: $${difference.toFixed(2)}`,
     });
   };
 
-  const salesData = {
-    todaySales: 2450.75,
-    totalTransactions: 45,
-    cashSales: 1890.50,
-    cardSales: 560.25,
-    averageTicket: 54.46,
+  const formatTime = (date: Date | null) => {
+    if (!date) return 'No iniciado';
+    return date.toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
+  const formatDate = (date: Date | null) => {
+    if (!date) return '';
+    return date.toLocaleDateString('es-ES');
   };
 
   return (
@@ -110,20 +158,46 @@ const CashRegisterDialog: React.FC<CashRegisterDialogProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Estado de Caja</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Estado de Caja
+                    {registerState.isOpen ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
+                    )}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">
-                      ${currentAmount.toFixed(2)}
+                    <div className={`text-3xl font-bold ${registerState.isOpen ? 'text-green-600' : 'text-gray-400'}`}>
+                      ${registerState.currentAmount.toFixed(2)}
                     </div>
                     <p className="text-gray-600">Efectivo en caja</p>
                   </div>
                   
                   <div className="space-y-2">
-                    <Badge variant="outline" className="w-full justify-center py-2">
+                    <Badge 
+                      variant={registerState.isOpen ? "default" : "secondary"} 
+                      className="w-full justify-center py-2"
+                    >
                       <Clock className="h-4 w-4 mr-2" />
-                      Turno iniciado: 08:00 AM
+                      {registerState.isOpen ? (
+                        <>
+                          Turno iniciado: {formatTime(registerState.startTime)}
+                          <br />
+                          <span className="text-xs">{formatDate(registerState.startTime)}</span>
+                        </>
+                      ) : (
+                        registerState.endTime ? (
+                          <>
+                            Turno cerrado: {formatTime(registerState.endTime)}
+                            <br />
+                            <span className="text-xs">{formatDate(registerState.endTime)}</span>
+                          </>
+                        ) : (
+                          'Caja cerrada'
+                        )
+                      )}
                     </Badge>
                   </div>
                 </CardContent>
@@ -134,30 +208,37 @@ const CashRegisterDialog: React.FC<CashRegisterDialogProps> = ({
                   <CardTitle className="text-lg">Operaciones</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="initial-amount">Monto inicial</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="initial-amount"
-                        type="number"
-                        step="0.01"
-                        value={initialAmount}
-                        onChange={(e) => setInitialAmount(e.target.value)}
-                        placeholder="0.00"
-                      />
-                      <Button onClick={handleOpenRegister}>
-                        Abrir Caja
+                  {!registerState.isOpen ? (
+                    <div>
+                      <Label htmlFor="initial-amount">Monto inicial</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="initial-amount"
+                          type="number"
+                          step="0.01"
+                          value={initialAmount}
+                          onChange={(e) => setInitialAmount(e.target.value)}
+                          placeholder="0.00"
+                        />
+                        <Button onClick={handleOpenRegister}>
+                          Abrir Caja
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-green-600 font-medium">
+                        ✓ Caja abierta y operativa
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleCloseRegister}
+                        className="w-full"
+                      >
+                        Cerrar Caja
                       </Button>
                     </div>
-                  </div>
-
-                  <Button 
-                    variant="outline" 
-                    onClick={handleCloseRegister}
-                    className="w-full"
-                  >
-                    Cerrar Caja
-                  </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -215,8 +296,8 @@ const CashRegisterDialog: React.FC<CashRegisterDialogProps> = ({
                   </div>
                   <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
                     <span>Diferencia:</span>
-                    <span className={calculateTotal() >= currentAmount ? 'text-green-600' : 'text-red-600'}>
-                      ${(calculateTotal() - currentAmount).toFixed(2)}
+                    <span className={calculateTotal() >= registerState.currentAmount ? 'text-green-600' : 'text-red-600'}>
+                      ${(calculateTotal() - registerState.currentAmount).toFixed(2)}
                     </span>
                   </div>
                 </div>
