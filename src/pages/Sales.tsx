@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +5,7 @@ import { ShoppingCart, Users, FileText, CreditCard } from 'lucide-react';
 import POSTab from '@/components/sales/POSTab';
 import CustomersTab from '@/components/sales/CustomersTab';
 import SalesHistoryTab from '@/components/sales/SalesHistoryTab';
+import ReportsTab from '@/components/reports/ReportsTab';
 
 const Sales = () => {
   const { user, hasRole } = useAuth();
@@ -24,7 +24,7 @@ const Sales = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pos" className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4" />
               Punto de Venta
@@ -36,6 +36,10 @@ const Sales = () => {
             <TabsTrigger value="history" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Historial de Ventas
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Reportes
             </TabsTrigger>
           </TabsList>
 
@@ -49,6 +53,10 @@ const Sales = () => {
 
           <TabsContent value="history">
             <SalesHistoryTab />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <ReportsTab />
           </TabsContent>
         </Tabs>
       </div>

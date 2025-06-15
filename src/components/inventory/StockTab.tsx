@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import StockMovementDialog from './StockMovementDialog';
 import StockTable from './components/StockTable';
 import RecentMovements from './components/RecentMovements';
 import { useStockData } from './hooks/useStockData';
+import LowStockAlerts from './components/LowStockAlerts';
 
 const StockTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +29,9 @@ const StockTab = () => {
 
   return (
     <div className="space-y-6">
+      {/* Alertas de stock bajo */}
+      <LowStockAlerts />
+      
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useCartData } from './hooks/useCartData';
 import { useSalesData } from './hooks/useSalesData';
@@ -6,11 +5,16 @@ import ProductSearchSection from './components/ProductSearchSection';
 import SaleConfigurationSection from './components/SaleConfigurationSection';
 import CartSection from './components/CartSection';
 import SaleConfirmationDialog from './components/SaleConfirmationDialog';
+import QuickActions from './components/QuickActions';
+import Calculator from './components/Calculator';
+import QuickCustomerDialog from './components/QuickCustomerDialog';
 import { useToast } from '@/hooks/use-toast';
 
 const POSTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showQuickCustomer, setShowQuickCustomer] = useState(false);
   const { toast } = useToast();
   
   // Referencias para navegación por teclado
@@ -19,6 +23,25 @@ const POSTab = () => {
   const customerSelectorRef = useRef<HTMLDivElement>(null);
   const paymentMethodRef = useRef<HTMLDivElement>(null);
   
+  const handleQuickActions = {
+    calculator: () => setShowCalculator(true),
+    printLastSale: () => {
+      // TODO: Implementar impresión de última venta
+      toast({
+        title: 'Función pendiente',
+        description: 'La impresión de última venta estará disponible próximamente',
+      });
+    },
+    quickCustomer: () => setShowQuickCustomer(true),
+    cashRegister: () => {
+      // TODO: Implementar gestión de caja
+      toast({
+        title: 'Función pendiente',
+        description: 'La gestión de caja estará disponible próximamente',
+      });
+    },
+  };
+
   const {
     cartItems,
     customerSelected,
@@ -260,6 +283,13 @@ const POSTab = () => {
 
         {/* Cart and Configuration Section */}
         <div className="space-y-6">
+          <QuickActions
+            onCalculatorOpen={handleQuickActions.calculator}
+            onPrintLastSale={handleQuickActions.printLastSale}
+            onQuickCustomer={handleQuickActions.quickCustomer}
+            onCashRegister={handleQuickActions.cashRegister}
+          />
+
           <SaleConfigurationSection
             customerSelectorRef={customerSelectorRef}
             paymentMethodRef={paymentMethodRef}
@@ -289,7 +319,7 @@ const POSTab = () => {
         </div>
       </div>
 
-      {/* Modal de confirmación */}
+      {/* Modales */}
       <SaleConfirmationDialog
         open={showConfirmation}
         onOpenChange={setShowConfirmation}
@@ -301,6 +331,17 @@ const POSTab = () => {
         customer={customerSelected}
         onConfirm={confirmSale}
         isProcessing={isCreatingSale}
+      />
+
+      <Calculator
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
+
+      <QuickCustomerDialog
+        open={showQuickCustomer}
+        onOpenChange={setShowQuickCustomer}
+        onCustomerCreated={setCustomerSelected}
       />
     </>
   );

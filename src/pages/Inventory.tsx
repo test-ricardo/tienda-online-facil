@@ -1,18 +1,17 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, AlertTriangle, Clock, Plus, BarChart3 } from 'lucide-react';
-import ProductsTab from '@/components/inventory/ProductsTab';
-import CombosTab from '@/components/inventory/CombosTab';
+import { ShoppingCart, Package, FolderOpen, Package2, Clock, BarChart3 } from 'lucide-react';
 import StockTab from '@/components/inventory/StockTab';
-import ExpirationTab from '@/components/inventory/ExpirationTab';
+import ProductsTab from '@/components/inventory/ProductsTab';
 import CategoriesTab from '@/components/inventory/CategoriesTab';
+import CombosTab from '@/components/inventory/CombosTab';
+import ExpirationTab from '@/components/inventory/ExpirationTab';
+import ReportsTab from '@/components/reports/ReportsTab';
 
 const Inventory = () => {
   const { user, hasRole } = useAuth();
-  const [activeTab, setActiveTab] = useState("products");
+  const [activeTab, setActiveTab] = useState("stock");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -21,41 +20,49 @@ const Inventory = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Inventario</h1>
           <p className="text-gray-600 mt-2">
-            Administra productos, stock, combos y vencimientos
+            Control de stock, productos, categorías y vencimientos
           </p>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="products" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Productos
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="stock" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
+              <Package className="h-4 w-4" />
               Stock
             </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Productos
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Categorías
+            </TabsTrigger>
             <TabsTrigger value="combos" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+              <Package2 className="h-4 w-4" />
               Combos
             </TabsTrigger>
             <TabsTrigger value="expiration" className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Vencimientos
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Categorías
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Reportes
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stock">
+            <StockTab />
+          </TabsContent>
 
           <TabsContent value="products">
             <ProductsTab />
           </TabsContent>
 
-          <TabsContent value="stock">
-            <StockTab />
+          <TabsContent value="categories">
+            <CategoriesTab />
           </TabsContent>
 
           <TabsContent value="combos">
@@ -66,8 +73,8 @@ const Inventory = () => {
             <ExpirationTab />
           </TabsContent>
 
-          <TabsContent value="categories">
-            <CategoriesTab />
+          <TabsContent value="reports">
+            <ReportsTab />
           </TabsContent>
         </Tabs>
       </div>
