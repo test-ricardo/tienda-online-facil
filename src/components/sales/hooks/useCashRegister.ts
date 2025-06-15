@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -193,7 +192,8 @@ export const useCashRegister = () => {
     }
   };
 
-  const handleCloseRegister = async () => {
+  // Cambia el método de cierre para aceptar comentario
+  const handleCloseRegister = async (note?: string) => {
     if (!registerState.sessionId) return;
 
     const total = calculateTotal();
@@ -209,6 +209,7 @@ export const useCashRegister = () => {
           closing_amount: total,
           expected_amount: registerState.currentAmount,
           difference_amount: difference,
+          notes: note || null
         })
         .eq('id', registerState.sessionId);
 
@@ -238,6 +239,6 @@ export const useCashRegister = () => {
     calculateTotal,
     handleCountChange,
     handleOpenRegister,
-    handleCloseRegister,
+    handleCloseRegister, // ahora acepta un comentario
   };
 };
