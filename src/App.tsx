@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./components/auth/AuthPage";
 import Dashboard from "./pages/Dashboard";
+import Inventory from "./pages/Inventory";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Navbar from "./components/layout/Navbar";
 
@@ -38,6 +39,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['admin', 'manager']}>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/inventory" 
+                element={
+                  <ProtectedRoute requiredRoles={['admin', 'manager', 'inventory']}>
+                    <Inventory />
                   </ProtectedRoute>
                 } 
               />

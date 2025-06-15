@@ -9,6 +9,245 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      combo_items: {
+        Row: {
+          combo_id: string
+          id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          combo_id: string
+          id?: string
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          combo_id?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_items_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "product_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiration_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          created_by: string
+          days_before_expiration: number
+          id: string
+          is_active: boolean | null
+          reference_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          created_by: string
+          days_before_expiration?: number
+          id?: string
+          is_active?: boolean | null
+          reference_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          created_by?: string
+          days_before_expiration?: number
+          id?: string
+          is_active?: boolean | null
+          reference_id?: string
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          batch_number: string | null
+          entry_date: string
+          expiration_date: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          supplier: string | null
+        }
+        Insert: {
+          batch_number?: string | null
+          entry_date?: string
+          expiration_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          quantity?: number
+          supplier?: string | null
+        }
+        Update: {
+          batch_number?: string | null
+          entry_date?: string
+          expiration_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          supplier?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_combos: {
+        Row: {
+          combo_price: number
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          combo_price: number
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          combo_price?: number
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          barcode: string | null
+          category_id: string
+          cost: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          max_stock: number | null
+          min_stock: number | null
+          name: string
+          price: number
+          sell_by_weight: boolean | null
+          sku: string
+          stock_unit: string | null
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category_id: string
+          cost: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_stock?: number | null
+          min_stock?: number | null
+          name: string
+          price: number
+          sell_by_weight?: boolean | null
+          sku: string
+          stock_unit?: string | null
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category_id?: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_stock?: number | null
+          min_stock?: number | null
+          name?: string
+          price?: number
+          sell_by_weight?: boolean | null
+          sku?: string
+          stock_unit?: string | null
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -35,6 +274,82 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          movement_type: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          reference_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          movement_type: string
+          notes?: string | null
+          product_id: string
+          quantity: number
+          reference_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          movement_type?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          reference_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -65,6 +380,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      combo_has_stock: {
+        Args: { combo_id: string }
+        Returns: boolean
+      }
+      get_expiring_products: {
+        Args: { days_ahead?: number }
+        Returns: {
+          product_id: string
+          product_name: string
+          quantity: number
+          expiration_date: string
+          days_until_expiry: number
+        }[]
+      }
+      get_product_stock: {
+        Args: { product_id: string }
+        Returns: number
+      }
       get_user_roles: {
         Args: { _user_id?: string }
         Returns: Database["public"]["Enums"]["app_role"][]
