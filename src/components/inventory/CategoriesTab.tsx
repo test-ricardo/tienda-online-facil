@@ -8,9 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Search, Folder, FolderOpen, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import CategoryDialog from './CategoryDialog';
 
 const CategoriesTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const { toast } = useToast();
 
   const { data: categories, isLoading, refetch } = useQuery({
@@ -34,6 +39,76 @@ const CategoriesTab = () => {
     },
   });
 
+  const handleEditCategory = (category: any) => {
+    setSelectedCategory(category);
+    setSelectedSubcategory(null);
+    setShowCategoryDialog(true);
+  };
+
+  const handleEditSubcategory = (subcategory: any) => {
+    setSelectedSubcategory(subcategory);
+    setSelectedCategory(null);
+    setShowSubcategoryDialog(true);
+  };
+
+  const handleAddCategory = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
+    setShowCategoryDialog(true);
+  };
+
+  const handleAddSubcategory = () => {
+    setSelectedCategory(null);
+    setSelectedSubcategory(null);
+    setShowSubcategoryDialog(true);
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId);
+      
+      if (error) throw error;
+      
+      refetch();
+      toast({
+        title: 'Categoría eliminada',
+        description: 'La categoría se ha eliminado correctamente.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteSubcategory = async (subcategoryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('subcategories')
+        .delete()
+        .eq('id', subcategoryId);
+      
+      if (error) throw error;
+      
+      refetch();
+      toast({
+        title: 'Subcategoría eliminada',
+        description: 'La subcategoría se ha eliminado correctamente.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -43,11 +118,11 @@ const CategoriesTab = () => {
           <p className="text-gray-600">Organiza tu catálogo de productos</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleAddSubcategory} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Subcategoría
           </Button>
-          <Button className="flex items-center gap-2">
+          <Button onClick={handleAddCategory} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Categoría
           </Button>
@@ -115,10 +190,18 @@ const CategoriesTab = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditCategory(category)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteCategory(category.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -141,10 +224,18 @@ const CategoriesTab = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditSubcategory(subcategory)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteSubcategory(subcategory.id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -158,6 +249,38 @@ const CategoriesTab = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Category Dialog */}
+      <CategoryDialog
+        open={showCategoryDialog}
+        onOpenChange={setShowCategoryDialog}
+        category={selectedCategory}
+        type="category"
+        onSuccess={() => {
+          refetch();
+          setShowCategoryDialog(false);
+          toast({
+            title: selectedCategory ? 'Categoría actualizada' : 'Categoría creada',
+            description: 'Los cambios se han guardado correctamente.',
+          });
+        }}
+      />
+
+      {/* Subcategory Dialog */}
+      <CategoryDialog
+        open={showSubcategoryDialog}
+        onOpenChange={setShowSubcategoryDialog}
+        subcategory={selectedSubcategory}
+        type="subcategory"
+        onSuccess={() => {
+          refetch();
+          setShowSubcategoryDialog(false);
+          toast({
+            title: selectedSubcategory ? 'Subcategoría actualizada' : 'Subcategoría creada',
+            description: 'Los cambios se han guardado correctamente.',
+          });
+        }}
+      />
     </div>
   );
 };

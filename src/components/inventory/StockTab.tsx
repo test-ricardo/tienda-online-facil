@@ -11,19 +11,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import StockMovementDialog from './StockMovementDialog';
 
-interface ProductStock {
-  product: {
-    id: string;
-    name: string;
-    sku: string;
-    stock_unit: string;
-    min_stock: number;
-    max_stock: number;
-    categories?: { name: string };
-    subcategories?: { name: string };
-  };
+interface ProductWithStock {
+  id: string;
+  name: string;
+  sku: string;
+  stock_unit: string;
+  min_stock: number;
+  max_stock: number;
+  categories?: { name: string };
+  subcategories?: { name: string };
   totalStock: number;
-  lots: any[];
   expiringSoon: boolean;
 }
 
@@ -33,64 +30,58 @@ const StockTab = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const { toast } = useToast();
 
-  const { data: inventory, isLoading, refetch } = useQuery({
-    queryKey: ['inventory', searchTerm],
+  // Obtener productos con su stock calculado
+  const { data: productsWithStock, isLoading, refetch } = useQuery({
+    queryKey: ['products-with-stock', searchTerm],
     queryFn: async () => {
       let query = supabase
-        .from('inventory')
+        .from('products')
         .select(`
           *,
-          products (
-            id,
-            name,
-            sku,
-            stock_unit,
-            min_stock,
-            max_stock,
-            categories (name),
-            subcategories (name)
-          )
+          categories (name),
+          subcategories (name)
         `)
-        .gt('quantity', 0)
-        .order('entry_date', { ascending: false });
+        .eq('is_active', true)
+        .order('name');
 
-      const { data, error } = await query;
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
+      }
+
+      const { data: products, error } = await query;
       if (error) throw error;
 
-      // Agrupar por producto y calcular stock total
-      const productStock: Record<string, ProductStock> = (data || []).reduce((acc, item) => {
-        if (!item.products) return acc;
-        
-        const productId = item.products.id;
-        if (!acc[productId]) {
-          acc[productId] = {
-            product: item.products,
-            totalStock: 0,
-            lots: [],
-            expiringSoon: false,
-          };
-        }
-        acc[productId].totalStock += parseFloat(String(item.quantity));
-        acc[productId].lots.push(item);
-        
-        // Verificar si hay lotes próximos a vencer (7 días)
-        if (item.expiration_date) {
-          const expirationDate = new Date(item.expiration_date);
-          const now = new Date();
-          const daysUntilExpiry = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
-            acc[productId].expiringSoon = true;
-          }
-        }
-        
-        return acc;
-      }, {} as Record<string, ProductStock>);
+      // Para cada producto, calcular el stock total
+      const productsWithStock = await Promise.all(
+        (products || []).map(async (product) => {
+          const { data: stockData } = await supabase
+            .rpc('get_product_stock', { product_id: product.id });
 
-      return Object.values(productStock).filter(item => {
-        if (!searchTerm) return true;
-        return item.product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               item.product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-      });
+          // Verificar si hay productos próximos a vencer
+          const { data: expiringStock } = await supabase
+            .from('inventory')
+            .select('quantity, expiration_date')
+            .eq('product_id', product.id)
+            .not('expiration_date', 'is', null)
+            .gt('quantity', 0);
+
+          const expiringSoon = (expiringStock || []).some(item => {
+            if (!item.expiration_date) return false;
+            const expirationDate = new Date(item.expiration_date);
+            const now = new Date();
+            const daysUntilExpiry = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+          });
+
+          return {
+            ...product,
+            totalStock: stockData || 0,
+            expiringSoon,
+          } as ProductWithStock;
+        })
+      );
+
+      return productsWithStock;
     },
   });
 
@@ -110,13 +101,13 @@ const StockTab = () => {
     },
   });
 
-  const getStockStatus = (product: any, totalStock: number) => {
+  const getStockStatus = (product: ProductWithStock) => {
     const minStock = product.min_stock || 0;
     const maxStock = product.max_stock;
     
-    if (totalStock <= minStock) return 'critical';
-    if (maxStock && totalStock >= maxStock) return 'excess';
-    if (totalStock <= minStock * 1.5) return 'low';
+    if (product.totalStock <= minStock) return 'critical';
+    if (maxStock && product.totalStock >= maxStock) return 'excess';
+    if (product.totalStock <= minStock * 1.5) return 'low';
     return 'normal';
   };
 
@@ -176,7 +167,7 @@ const StockTab = () => {
                 Stock Actual
               </CardTitle>
               <CardDescription>
-                {inventory?.length || 0} productos con stock
+                {productsWithStock?.length || 0} productos con stock
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -196,25 +187,22 @@ const StockTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {inventory?.map((item: ProductStock) => {
-                      const status = getStockStatus(item.product, item.totalStock);
+                    {productsWithStock?.map((product: ProductWithStock) => {
+                      const status = getStockStatus(product);
                       
                       return (
-                        <TableRow key={item.product.id}>
+                        <TableRow key={product.id}>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{item.product.name}</div>
+                              <div className="font-medium">{product.name}</div>
                               <div className="text-sm text-gray-500">
-                                SKU: {item.product.sku}
+                                SKU: {product.sku}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {item.totalStock.toFixed(3)} {item.product.stock_unit}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {item.lots.length} lote(s)
+                              {product.totalStock.toFixed(3)} {product.stock_unit}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -223,7 +211,7 @@ const StockTab = () => {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {item.expiringSoon && (
+                            {product.expiringSoon && (
                               <Badge variant="destructive" className="flex items-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
                                 Próximo a vencer
@@ -234,7 +222,7 @@ const StockTab = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleAddMovement(item.product)}
+                              onClick={() => handleAddMovement(product)}
                             >
                               <Plus className="h-4 w-4 mr-1" />
                               Movimiento

@@ -6,11 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Clock, AlertTriangle, Calendar } from 'lucide-react';
+import { Plus, Search, Clock, AlertTriangle, Calendar, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import AlertDialog from './AlertDialog';
 
 const ExpirationTab = () => {
   const [daysAhead, setDaysAhead] = useState('7');
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const { toast } = useToast();
 
   const { data: expiringProducts, isLoading } = useQuery({
     queryKey: ['expiring-products', daysAhead],
@@ -23,7 +28,7 @@ const ExpirationTab = () => {
     },
   });
 
-  const { data: alerts } = useQuery({
+  const { data: alerts, refetch: refetchAlerts } = useQuery({
     queryKey: ['expiration-alerts'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -78,6 +83,39 @@ const ExpirationTab = () => {
     return 'outline';
   };
 
+  const handleEditAlert = (alert: any) => {
+    setSelectedAlert(alert);
+    setShowAlertDialog(true);
+  };
+
+  const handleAddAlert = () => {
+    setSelectedAlert(null);
+    setShowAlertDialog(true);
+  };
+
+  const handleDeleteAlert = async (alertId: string) => {
+    try {
+      const { error } = await supabase
+        .from('expiration_alerts')
+        .delete()
+        .eq('id', alertId);
+      
+      if (error) throw error;
+      
+      refetchAlerts();
+      toast({
+        title: 'Alerta eliminada',
+        description: 'La alerta se ha eliminado correctamente.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -86,7 +124,7 @@ const ExpirationTab = () => {
           <h2 className="text-2xl font-bold text-gray-900">Control de Vencimientos</h2>
           <p className="text-gray-600">Monitorea productos próximos a vencer</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button onClick={handleAddAlert} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           Nueva Alerta
         </Button>
@@ -202,12 +240,30 @@ const ExpirationTab = () => {
                       {alert.alert_type === 'product' && 'Producto'}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">
-                      {alert.days_before_expiration} días
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <div className="text-sm font-medium">
+                        {alert.days_before_expiration} días
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        antes del vencimiento
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      antes del vencimiento
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditAlert(alert)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteAlert(alert.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -221,6 +277,21 @@ const ExpirationTab = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        open={showAlertDialog}
+        onOpenChange={setShowAlertDialog}
+        alert={selectedAlert}
+        onSuccess={() => {
+          refetchAlerts();
+          setShowAlertDialog(false);
+          toast({
+            title: selectedAlert ? 'Alerta actualizada' : 'Alerta creada',
+            description: 'Los cambios se han guardado correctamente.',
+          });
+        }}
+      />
     </div>
   );
 };

@@ -6,13 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Calendar, Package, DollarSign } from 'lucide-react';
+import { Plus, Search, Calendar, Package, DollarSign, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import ComboDialog from './ComboDialog';
 
 const CombosTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showComboDialog, setShowComboDialog] = useState(false);
+  const [selectedCombo, setSelectedCombo] = useState(null);
+  const { toast } = useToast();
 
-  const { data: combos, isLoading } = useQuery({
+  const { data: combos, isLoading, refetch } = useQuery({
     queryKey: ['combos', searchTerm],
     queryFn: async () => {
       let query = supabase
@@ -53,6 +58,16 @@ const CombosTab = () => {
     return individualTotal - combo.combo_price;
   };
 
+  const handleEditCombo = (combo: any) => {
+    setSelectedCombo(combo);
+    setShowComboDialog(true);
+  };
+
+  const handleAddCombo = () => {
+    setSelectedCombo(null);
+    setShowComboDialog(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -61,7 +76,7 @@ const CombosTab = () => {
           <h2 className="text-2xl font-bold text-gray-900">Combos de Productos</h2>
           <p className="text-gray-600">Gestiona ofertas y combos promocionales</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button onClick={handleAddCombo} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           Nuevo Combo
         </Button>
@@ -160,8 +175,12 @@ const CombosTab = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
-                          Editar
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditCombo(combo)}
+                        >
+                          <Edit className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -172,6 +191,21 @@ const CombosTab = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Combo Dialog */}
+      <ComboDialog
+        open={showComboDialog}
+        onOpenChange={setShowComboDialog}
+        combo={selectedCombo}
+        onSuccess={() => {
+          refetch();
+          setShowComboDialog(false);
+          toast({
+            title: selectedCombo ? 'Combo actualizado' : 'Combo creado',
+            description: 'Los cambios se han guardado correctamente.',
+          });
+        }}
+      />
     </div>
   );
 };

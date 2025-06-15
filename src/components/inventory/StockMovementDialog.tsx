@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface StockMovementDialogProps {
   open: boolean;
@@ -23,7 +23,6 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
   product,
   onSuccess,
 }) => {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     movement_type: 'entry',
     quantity: '',
@@ -34,11 +33,12 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product || !user) return;
-    
+
     setLoading(true);
 
     try {
@@ -55,8 +55,8 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
 
       if (movementError) throw movementError;
 
-      // Si es entrada, crear registro en inventario
-      if (formData.movement_type === 'entry' && parseFloat(formData.quantity) > 0) {
+      // Si es entrada, agregar al inventario directamente
+      if (formData.movement_type === 'entry') {
         const { error: inventoryError } = await supabase
           .from('inventory')
           .insert([{
@@ -71,7 +71,11 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
         if (inventoryError) throw inventoryError;
       }
 
-      onSuccess();
+      toast({
+        title: 'Movimiento registrado',
+        description: 'El movimiento de stock se ha registrado correctamente.',
+      });
+
       setFormData({
         movement_type: 'entry',
         quantity: '',
@@ -80,6 +84,8 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
         supplier: '',
         notes: '',
       });
+
+      onSuccess();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -100,64 +106,68 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Registrar Movimiento</DialogTitle>
+          <DialogTitle>Movimiento de Stock</DialogTitle>
           <DialogDescription>
-            {product?.name} - {product?.sku}
+            Registrar movimiento para: {product?.name}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="movement_type">Tipo de Movimiento *</Label>
-            <Select value={formData.movement_type} onValueChange={(value) => setFormData({ ...formData, movement_type: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {movementTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="quantity">Cantidad * ({product?.stock_unit})</Label>
-            <Input
-              id="quantity"
-              type="number"
-              step="0.001"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="movement_type">Tipo de Movimiento *</Label>
+              <Select 
+                value={formData.movement_type} 
+                onValueChange={(value) => setFormData({ ...formData, movement_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {movementTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Cantidad *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                step="0.001"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                required
+              />
+            </div>
           </div>
 
           {formData.movement_type === 'entry' && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="expiration_date">Fecha de Vencimiento</Label>
-                <Input
-                  id="expiration_date"
-                  type="date"
-                  value={formData.expiration_date}
-                  onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="expiration_date">Fecha de Vencimiento</Label>
+                  <Input
+                    id="expiration_date"
+                    type="date"
+                    value={formData.expiration_date}
+                    onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="batch_number">Número de Lote</Label>
+                  <Input
+                    id="batch_number"
+                    value={formData.batch_number}
+                    onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
+                  />
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="batch_number">Número de Lote</Label>
-                <Input
-                  id="batch_number"
-                  value={formData.batch_number}
-                  onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="supplier">Proveedor</Label>
                 <Input
@@ -184,7 +194,7 @@ const StockMovementDialog: React.FC<StockMovementDialogProps> = ({
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Registrando...' : 'Registrar'}
+              {loading ? 'Registrando...' : 'Registrar Movimiento'}
             </Button>
           </DialogFooter>
         </form>
