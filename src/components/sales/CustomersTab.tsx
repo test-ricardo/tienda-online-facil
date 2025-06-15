@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Plus, Edit, UserCheck, UserX, CreditCard } from 'lucide-react';
+import { Search, Plus, Edit, UserCheck, UserX, CreditCard, ShieldCheck, ShieldOff } from 'lucide-react';
 import { useCustomersData } from './hooks/useCustomersData';
 import CustomerForm from './components/CustomerForm';
 
@@ -33,6 +33,7 @@ const CustomersTab = () => {
     createCustomer,
     updateCustomer,
     toggleCustomerStatus,
+    toggleCreditEnabled,
     isCreating,
     isUpdating,
   } = useCustomersData();
@@ -40,7 +41,8 @@ const CustomersTab = () => {
   const filteredCustomers = customers?.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.customer_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (customer.document_number && customer.document_number.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
 
   const handleCreateCustomer = async (data: any) => {
@@ -65,6 +67,27 @@ const CustomersTab = () => {
     toggleCustomerStatus({ id: customer.id, isActive: !customer.is_active });
   };
 
+  const handleToggleCreditEnabled = (customer: any) => {
+    toggleCreditEnabled({ id: customer.id, creditEnabled: !customer.credit_enabled });
+  };
+
+  const getDocumentTypeLabel = (type: string) => {
+    switch (type) {
+      case 'dni': return 'DNI';
+      case 'cedula': return 'Cédula';
+      case 'pasaporte': return 'Pasaporte';
+      default: return type;
+    }
+  };
+
+  const getAvailableCredit = (customer: any) => {
+    if (!customer.credit_enabled) return 0;
+    if (customer.current_balance >= 0) {
+      return customer.credit_limit + customer.current_balance;
+    }
+    return Math.max(0, customer.credit_limit + customer.current_balance);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header con búsqueda y botón nuevo */}
@@ -87,7 +110,7 @@ const CustomersTab = () => {
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Buscar por nombre, código o email..."
+              placeholder="Buscar por nombre, código, email o documento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -110,6 +133,7 @@ const CustomersTab = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Documento</TableHead>
                   <TableHead>Contacto</TableHead>
                   <TableHead>Crédito</TableHead>
                   <TableHead>Balance</TableHead>
@@ -128,13 +152,45 @@ const CustomersTab = () => {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {customer.email && <div>{customer.email}</div>}
-                        {customer.phone && <div className="text-gray-500">{customer.phone}</div>}
+                        {customer.document_type && customer.document_number ? (
+                          <div>
+                            <div className="font-medium">
+                              {getDocumentTypeLabel(customer.document_type)}
+                            </div>
+                            <div className="text-gray-500">{customer.document_number}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Sin documento</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">
-                        ${customer.credit_limit?.toFixed(2) || '0.00'}
+                      <div className="text-sm">
+                        {customer.email && <div>{customer.email}</div>}
+                        {customer.phone && <div className="text-gray-500">{customer.phone}</div>}
+                        {!customer.email && !customer.phone && (
+                          <span className="text-gray-400">Sin contacto</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            ${customer.credit_limit?.toFixed(2) || '0.00'}
+                          </span>
+                          <Badge 
+                            variant={customer.credit_enabled ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {customer.credit_enabled ? 'Habilitado' : 'Deshabilitado'}
+                          </Badge>
+                        </div>
+                        {customer.credit_enabled && (
+                          <div className="text-xs text-gray-500">
+                            Disponible: ${getAvailableCredit(customer).toFixed(2)}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -155,6 +211,7 @@ const CustomersTab = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditCustomer(customer)}
+                          title="Editar cliente"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
@@ -163,11 +220,25 @@ const CustomersTab = () => {
                           size="sm"
                           onClick={() => handleToggleStatus(customer)}
                           className={customer.is_active ? 'text-red-600' : 'text-green-600'}
+                          title={customer.is_active ? 'Desactivar cliente' : 'Activar cliente'}
                         >
                           {customer.is_active ? (
                             <UserX className="h-3 w-3" />
                           ) : (
                             <UserCheck className="h-3 w-3" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleCreditEnabled(customer)}
+                          className={customer.credit_enabled ? 'text-orange-600' : 'text-blue-600'}
+                          title={customer.credit_enabled ? 'Deshabilitar crédito' : 'Habilitar crédito'}
+                        >
+                          {customer.credit_enabled ? (
+                            <ShieldOff className="h-3 w-3" />
+                          ) : (
+                            <ShieldCheck className="h-3 w-3" />
                           )}
                         </Button>
                       </div>

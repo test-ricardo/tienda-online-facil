@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, DollarSign, Smartphone, UserCheck } from 'lucide-react';
+import { CreditCard, DollarSign, Smartphone, UserCheck, AlertTriangle } from 'lucide-react';
 
 interface PaymentMethodSelectorProps {
   paymentMethod: string;
@@ -28,6 +28,21 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     { value: 'account', label: 'A Cuenta', icon: UserCheck, requiresCustomer: true },
   ];
 
+  const getAvailableCredit = (customer: any) => {
+    if (!customer?.credit_enabled) return 0;
+    if (customer.current_balance >= 0) {
+      return customer.credit_limit + customer.current_balance;
+    }
+    return Math.max(0, customer.credit_limit + customer.current_balance);
+  };
+
+  const canUseCredit = () => {
+    return customerSelected && 
+           customerSelected.is_active && 
+           customerSelected.credit_enabled && 
+           customerSelected.credit_limit > 0;
+  };
+
   return (
     <div>
       <Label className="text-sm font-medium">Método de Pago</Label>
@@ -38,7 +53,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         <SelectContent>
           {paymentMethods.map((method) => {
             const Icon = method.icon;
-            const isDisabled = method.requiresCustomer && !customerSelected;
+            const isDisabled = method.requiresCustomer && (!customerSelected || !canUseCredit());
             
             return (
               <SelectItem 
@@ -49,8 +64,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4" />
                   <span>{method.label}</span>
-                  {isDisabled && (
+                  {method.requiresCustomer && !customerSelected && (
                     <span className="text-xs text-gray-500">(Requiere cliente)</span>
+                  )}
+                  {method.requiresCustomer && customerSelected && !canUseCredit() && (
+                    <span className="text-xs text-red-500">(Crédito no disponible)</span>
                   )}
                 </div>
               </SelectItem>
@@ -60,11 +78,30 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </Select>
       
       {paymentMethod === 'account' && customerSelected && (
-        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
-          <p className="text-yellow-800">
-            <strong>Crédito disponible:</strong> $
-            {(customerSelected.credit_limit + Math.max(0, customerSelected.current_balance)).toFixed(2)}
-          </p>
+        <div className="mt-2 space-y-2">
+          {canUseCredit() ? (
+            <div className="p-2 bg-green-50 border border-green-200 rounded text-sm">
+              <p className="text-green-800 font-medium">
+                Crédito disponible: ${getAvailableCredit(customerSelected).toFixed(2)}
+              </p>
+              <p className="text-green-600 text-xs">
+                Límite: ${customerSelected.credit_limit.toFixed(2)} | 
+                Balance actual: ${customerSelected.current_balance.toFixed(2)}
+              </p>
+            </div>
+          ) : (
+            <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
+              <div className="flex items-center gap-2 text-red-800">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">Ventas a cuenta no disponibles</span>
+              </div>
+              <div className="text-red-600 text-xs mt-1">
+                {!customerSelected.credit_enabled && "• Crédito deshabilitado para este cliente"}
+                {customerSelected.credit_enabled && customerSelected.credit_limit <= 0 && "• Sin límite de crédito configurado"}
+                {!customerSelected.is_active && "• Cliente inactivo"}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -21,6 +22,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 
 const customerSchema = z.object({
@@ -28,9 +30,10 @@ const customerSchema = z.object({
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   phone: z.string().optional(),
   address: z.string().optional(),
-  document_type: z.enum(['cedula', 'ruc', 'passport']).optional(),
+  document_type: z.enum(['dni', 'cedula', 'pasaporte']).optional(),
   document_number: z.string().optional(),
   credit_limit: z.number().min(0, 'El límite de crédito debe ser positivo').default(0),
+  credit_enabled: z.boolean().default(false),
   notes: z.string().optional(),
 });
 
@@ -59,6 +62,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
       document_type: customer?.document_type || undefined,
       document_number: customer?.document_number || '',
       credit_limit: customer?.credit_limit || 0,
+      credit_enabled: customer?.credit_enabled ?? false,
       notes: customer?.notes || '',
     },
   });
@@ -66,6 +70,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
   const handleSubmit = async (data: CustomerFormData) => {
     await onSubmit(data);
   };
+
+  const creditEnabled = form.watch('credit_enabled');
 
   return (
     <Form {...form}>
@@ -115,26 +121,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
 
           <FormField
             control={form.control}
-            name="credit_limit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Límite de Crédito</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="document_type"
             render={({ field }) => (
               <FormItem>
@@ -146,9 +132,9 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                    <SelectItem value="dni">DNI</SelectItem>
                     <SelectItem value="cedula">Cédula</SelectItem>
-                    <SelectItem value="ruc">RUC</SelectItem>
-                    <SelectItem value="passport">Pasaporte</SelectItem>
+                    <SelectItem value="pasaporte">Pasaporte</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -185,6 +171,53 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
           )}
         />
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="credit_enabled"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Ventas a Cuenta</FormLabel>
+                  <FormDescription>
+                    Permitir que este cliente compre a cuenta
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="credit_limit"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Límite de Crédito</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    disabled={!creditEnabled}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {!creditEnabled && "Habilita las ventas a cuenta para configurar el límite"}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
           name="notes"
@@ -192,7 +225,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({
             <FormItem>
               <FormLabel>Notas</FormLabel>
               <FormControl>
-                <Textarea {...field} rows={3} />
+                <Textarea {...field} rows={3} placeholder="Información adicional sobre el cliente..." />
               </FormControl>
               <FormMessage />
             </FormItem>

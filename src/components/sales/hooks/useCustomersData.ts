@@ -11,6 +11,7 @@ interface CreateCustomerData {
   document_type?: string;
   document_number?: string;
   credit_limit: number;
+  credit_enabled: boolean;
   notes?: string;
 }
 
@@ -122,12 +123,42 @@ export const useCustomersData = () => {
     },
   });
 
+  const toggleCreditEnabledMutation = useMutation({
+    mutationFn: async ({ id, creditEnabled }: { id: string; creditEnabled: boolean }) => {
+      const { data, error } = await supabase
+        .from('customers')
+        .update({ credit_enabled: creditEnabled })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.credit_enabled ? 'Crédito habilitado' : 'Crédito deshabilitado',
+        description: `Las ventas a cuenta han sido ${data.credit_enabled ? 'habilitadas' : 'deshabilitadas'} para este cliente`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['customers-management'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error al cambiar configuración de crédito',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     customers,
     isLoading,
     createCustomer: createCustomerMutation.mutate,
     updateCustomer: updateCustomerMutation.mutate,
     toggleCustomerStatus: toggleCustomerStatusMutation.mutate,
+    toggleCreditEnabled: toggleCreditEnabledMutation.mutate,
     isCreating: createCustomerMutation.isPending,
     isUpdating: updateCustomerMutation.isPending,
   };

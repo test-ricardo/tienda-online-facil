@@ -92,13 +92,36 @@ export const useSalesData = () => {
       
       // Verificar si el cliente puede comprar a cuenta
       if (saleData.customer_id && saleData.payment_method === 'account') {
-        const { data: canBuy } = await supabase.rpc('can_customer_buy_on_account', {
-          customer_id: saleData.customer_id,
-          sale_amount: total
-        });
-        
-        if (!canBuy) {
-          throw new Error('El cliente no tiene crédito suficiente para esta compra');
+        // Primero verificar que el cliente tenga crédito habilitado
+        const { data: customer, error: customerError } = await supabase
+          .from('customers')
+          .select('credit_enabled, credit_limit, current_balance, is_active')
+          .eq('id', saleData.customer_id)
+          .single();
+
+        if (customerError) {
+          throw new Error('Error al verificar información del cliente');
+        }
+
+        if (!customer.is_active) {
+          throw new Error('El cliente no está activo');
+        }
+
+        if (!customer.credit_enabled) {
+          throw new Error('Las ventas a cuenta están deshabilitadas para este cliente');
+        }
+
+        if (customer.credit_limit <= 0) {
+          throw new Error('El cliente no tiene límite de crédito configurado');
+        }
+
+        // Verificar límite de crédito disponible
+        const availableCredit = customer.current_balance >= 0 
+          ? customer.credit_limit + customer.current_balance 
+          : Math.max(0, customer.credit_limit + customer.current_balance);
+
+        if (total > availableCredit) {
+          throw new Error(`El monto excede el crédito disponible. Disponible: $${availableCredit.toFixed(2)}, Requerido: $${total.toFixed(2)}`);
         }
       }
 
@@ -167,6 +190,8 @@ export const useSalesData = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['products-with-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-management'] });
     },
     onError: (error: any) => {
       toast({
