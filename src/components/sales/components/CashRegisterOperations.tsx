@@ -14,7 +14,7 @@ interface CashRegisterState {
 
 interface CashRegisterOperationsProps {
   registerState: CashRegisterState;
-  onOpenRegister: (amount: number) => boolean;
+  onOpenRegister: (amount: number) => Promise<boolean>;
   onCloseRegister: () => void;
 }
 
@@ -24,12 +24,18 @@ const CashRegisterOperations: React.FC<CashRegisterOperationsProps> = ({
   onCloseRegister,
 }) => {
   const [initialAmount, setInitialAmount] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleOpenRegister = () => {
+  const handleOpenRegister = async () => {
     const amount = parseFloat(initialAmount);
-    const success = onOpenRegister(amount);
-    if (success) {
-      setInitialAmount('');
+    setIsLoading(true);
+    try {
+      const success = await onOpenRegister(amount);
+      if (success) {
+        setInitialAmount('');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -50,9 +56,10 @@ const CashRegisterOperations: React.FC<CashRegisterOperationsProps> = ({
                 value={initialAmount}
                 onChange={(e) => setInitialAmount(e.target.value)}
                 placeholder="0.00"
+                disabled={isLoading}
               />
-              <Button onClick={handleOpenRegister}>
-                Abrir Caja
+              <Button onClick={handleOpenRegister} disabled={isLoading}>
+                {isLoading ? 'Abriendo...' : 'Abrir Caja'}
               </Button>
             </div>
           </div>
