@@ -27,17 +27,21 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({
     <div>
       <Label className="text-sm font-medium">Cliente (Opcional)</Label>
       <Select 
-        value={selectedCustomer?.id || ""} 
+        value={selectedCustomer?.id || "no-customer"} 
         onValueChange={(value) => {
-          const customer = customers.find(c => c.id === value);
-          onSelectCustomer(customer || null);
+          if (value === "no-customer") {
+            onSelectCustomer(null);
+          } else {
+            const customer = customers.find(c => c.id === value);
+            onSelectCustomer(customer || null);
+          }
         }}
       >
         <SelectTrigger className="mt-1" onKeyDown={onKeyDown}>
           <SelectValue placeholder="Seleccionar cliente..." />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">
+          <SelectItem value="no-customer">
             <div className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               <span>Sin cliente</span>
