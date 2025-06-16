@@ -11,6 +11,7 @@ import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
 import Sales from "@/pages/Sales";
+import Admin from "@/pages/Admin";
 import AuthPage from "@/components/auth/AuthPage";
 import NotFound from "@/pages/NotFound";
 
@@ -62,6 +63,16 @@ const App = () => (
                     <Navbar />
                     <main className="flex-1">
                       <Sales />
+                    </main>
+                  </>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute requiredRoles={['admin']}>
+                  <>
+                    <Navbar />
+                    <main className="flex-1">
+                      <Admin />
                     </main>
                   </>
                 </ProtectedRoute>
