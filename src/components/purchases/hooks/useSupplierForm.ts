@@ -2,11 +2,36 @@
 import { useState, useEffect } from 'react';
 import { useSuppliersData } from './useSuppliersData';
 
-export const useSupplierForm = (supplier, onClose) => {
+interface Supplier {
+  id?: string;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  tax_id?: string;
+  payment_terms?: number;
+  notes?: string;
+  is_active?: boolean;
+}
+
+interface FormData {
+  name: string;
+  contact_person: string;
+  email: string;
+  phone: string;
+  address: string;
+  tax_id: string;
+  payment_terms: number;
+  notes: string;
+  is_active: boolean;
+}
+
+export const useSupplierForm = (supplier: Supplier | null, onClose: () => void) => {
   const { createSupplier, updateSupplier } = useSuppliersData();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     contact_person: '',
     email: '',
@@ -46,21 +71,24 @@ export const useSupplierForm = (supplier, onClose) => {
     }
   }, [supplier]);
 
-  const handleChange = (e) => {
-    const { name, value, type } = e.target;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: any } }) => {
+    const { name, value } = e.target;
+    const inputElement = e.target as HTMLInputElement;
+    const type = inputElement.type;
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'number' ? Number(value) : value
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      if (supplier) {
-        await updateSupplier({ id: supplier.id, ...formData });
+      if (supplier && supplier.id) {
+        await updateSupplier({ ...formData, id: supplier.id });
       } else {
         await createSupplier(formData);
       }

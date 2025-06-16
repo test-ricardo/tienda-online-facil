@@ -3,6 +3,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface InvoiceData {
+  supplier_id: string;
+  invoice_date: string;
+  due_date?: string;
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  notes?: string;
+}
+
 export const usePurchaseInvoicesData = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -38,7 +49,7 @@ export const usePurchaseInvoicesData = () => {
   });
 
   const createInvoice = useMutation({
-    mutationFn: async (invoiceData) => {
+    mutationFn: async (invoiceData: InvoiceData) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Generar número de factura
@@ -49,7 +60,7 @@ export const usePurchaseInvoicesData = () => {
         .insert([{
           ...invoiceData,
           invoice_number: invoiceNumber,
-          created_by: user.id
+          created_by: user?.id
         }])
         .select()
         .single();
@@ -74,7 +85,7 @@ export const usePurchaseInvoicesData = () => {
   });
 
   const updateInvoiceStatus = useMutation({
-    mutationFn: async ({ id, status }) => {
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { data, error } = await supabase
         .from('purchase_invoices')
         .update({ status })
@@ -108,6 +119,6 @@ export const usePurchaseInvoicesData = () => {
     isLoading,
     error,
     createInvoice: createInvoice.mutate,
-    updateInvoiceStatus: (id, status) => updateInvoiceStatus.mutate({ id, status }),
+    updateInvoiceStatus: (id: string, status: string) => updateInvoiceStatus.mutate({ id, status }),
   };
 };

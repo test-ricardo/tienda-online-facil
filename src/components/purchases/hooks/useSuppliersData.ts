@@ -3,6 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface Supplier {
+  id?: string;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  tax_id?: string;
+  payment_terms?: number;
+  notes?: string;
+  is_active?: boolean;
+}
+
 export const useSuppliersData = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -25,7 +38,7 @@ export const useSuppliersData = () => {
   });
 
   const createSupplier = useMutation({
-    mutationFn: async (supplier) => {
+    mutationFn: async (supplier: Supplier) => {
       const { data, error } = await supabase
         .from('suppliers')
         .insert([supplier])
@@ -52,7 +65,8 @@ export const useSuppliersData = () => {
   });
 
   const updateSupplier = useMutation({
-    mutationFn: async ({ id, ...updates }) => {
+    mutationFn: async (supplier: Supplier & { id: string }) => {
+      const { id, ...updates } = supplier;
       const { data, error } = await supabase
         .from('suppliers')
         .update(updates)
@@ -80,7 +94,7 @@ export const useSuppliersData = () => {
   });
 
   const deleteSupplier = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('suppliers')
         .delete()

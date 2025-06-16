@@ -21,7 +21,14 @@ const PurchaseReportsTab = () => {
     );
   }
 
-  const statsData = stats?.[0] || {};
+  const statsData = stats?.[0] || {
+    total_invoices: 0,
+    total_amount: 0,
+    pending_invoices: 0,
+    pending_amount: 0,
+    top_supplier: 'No hay datos',
+    avg_invoice_amount: 0
+  };
 
   return (
     <div className="space-y-6">
