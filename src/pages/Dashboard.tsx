@@ -1,61 +1,72 @@
 
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Package, DollarSign, Users, TrendingUp, AlertCircle, FileText, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Package, ShoppingCart, Users, TrendingUp, FileText, Truck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import ProductDialog from '@/components/inventory/ProductDialog';
 import QuickInvoiceDialog from '@/components/purchases/QuickInvoiceDialog';
+import SupplierDialog from '@/components/purchases/SupplierDialog';
 
 const Dashboard = () => {
-  const { user, userRoles, hasRole } = useAuth();
-  const navigate = useNavigate();
-  const [showQuickInvoice, setShowQuickInvoice] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [showSupplierDialog, setShowSupplierDialog] = useState(false);
 
-  const stats = [
+  const quickActions = [
     {
-      title: 'Ventas Hoy',
-      value: '$12,450',
-      icon: DollarSign,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      change: '+12.5%',
-      visible: hasRole('admin') || hasRole('manager') || hasRole('cashier')
-    },
-    {
-      title: 'Productos en Stock',
-      value: '1,234',
+      title: 'Nuevo Producto',
+      description: 'Agregar producto al inventario',
       icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      change: '-2.1%',
-      visible: hasRole('admin') || hasRole('manager') || hasRole('inventory')
+      action: () => setShowProductDialog(true),
+      color: 'bg-blue-500'
     },
     {
-      title: 'Clientes Activos',
-      value: '89',
-      icon: Users,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      change: '+5.7%',
-      visible: hasRole('admin') || hasRole('manager')
+      title: 'Factura de Compra',
+      description: 'Registrar compra rápida',
+      icon: FileText,
+      action: () => setShowInvoiceDialog(true),
+      color: 'bg-green-500'
     },
     {
-      title: 'Productos Críticos',
-      value: '12',
-      icon: AlertCircle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      change: '+3',
-      visible: hasRole('admin') || hasRole('manager') || hasRole('inventory')
-    },
+      title: 'Nuevo Proveedor',
+      description: 'Agregar proveedor',
+      icon: Truck,
+      action: () => setShowSupplierDialog(true),
+      color: 'bg-purple-500'
+    }
   ];
 
-  const visibleStats = stats.filter(stat => stat.visible);
-
-  const handleQuickInvoiceSuccess = () => {
-    // Podríamos refrescar estadísticas aquí si fuera necesario
-  };
+  const navigationCards = [
+    {
+      title: 'Inventario',
+      description: 'Gestión de productos y stock',
+      icon: Package,
+      href: '/inventory',
+      color: 'text-blue-600'
+    },
+    {
+      title: 'Ventas',
+      description: 'Punto de venta y clientes',
+      icon: ShoppingCart,
+      href: '/sales',
+      color: 'text-green-600'
+    },
+    {
+      title: 'Compras',
+      description: 'Proveedores y facturas',
+      icon: Truck,
+      href: '/purchases',
+      color: 'text-purple-600'
+    },
+    {
+      title: 'Usuarios',
+      description: 'Gestión de usuarios',
+      icon: Users,
+      href: '/users',
+      color: 'text-orange-600'
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -64,186 +75,133 @@ const Dashboard = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-2">
-            Bienvenido, {user?.email} | Roles: {userRoles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
+            Gestiona tu negocio desde aquí
           </p>
         </div>
 
-        {/* Quick Actions Bar */}
-        {(hasRole('admin') || hasRole('manager') || hasRole('inventory')) && (
-          <div className="mb-8">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Acciones Rápidas
-                </CardTitle>
-                <CardDescription>
-                  Accesos directos a las funciones más utilizadas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4">
-                  <Button 
-                    onClick={() => setShowQuickInvoice(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Cargar Factura de Compra
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate('/inventory')}
-                    className="flex items-center gap-2"
-                  >
-                    <Package className="h-4 w-4" />
-                    Gestionar Inventario
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate('/purchases')}
-                    className="flex items-center gap-2"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    Ver Compras
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {quickActions.map((action, index) => {
+              const IconComponent = action.icon;
+              return (
+                <Card key={index} className="cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-4">
+                      <div className={`${action.color} p-3 rounded-lg`}>
+                        <IconComponent className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{action.title}</h3>
+                        <p className="text-sm text-gray-600">{action.description}</p>
+                      </div>
+                      <Button onClick={action.action} size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {visibleStats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <Card key={index}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 mb-1">
-                        {stat.title}
-                      </p>
-                      <p className="text-3xl font-bold text-gray-900">
-                        {stat.value}
-                      </p>
-                      <p className={`text-sm ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'} mt-1`}>
-                        {stat.change} vs mes anterior
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                      <Icon className={`h-6 w-6 ${stat.color}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
-          {(hasRole('admin') || hasRole('manager')) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2" />
-                  Actividad Reciente
-                </CardTitle>
-                <CardDescription>
-                  Últimas transacciones del sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <div>
-                      <p className="font-medium">Venta #1234</p>
-                      <p className="text-sm text-gray-600">Hace 2 minutos</p>
-                    </div>
-                    <span className="text-green-600 font-medium">+$45.50</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b pb-2">
-                    <div>
-                      <p className="font-medium">Entrada de Inventario</p>
-                      <p className="text-sm text-gray-600">Hace 1 hora</p>
-                    </div>
-                    <span className="text-blue-600 font-medium">+50 unidades</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Venta #1233</p>
-                      <p className="text-sm text-gray-600">Hace 2 horas</p>
-                    </div>
-                    <span className="text-green-600 font-medium">+$127.80</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* Navigation Cards */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Módulos del Sistema</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {navigationCards.map((card, index) => {
+              const IconComponent = card.icon;
+              return (
+                <Link key={index} to={card.href}>
+                  <Card className="h-full hover:shadow-lg transition-all hover:scale-105">
+                    <CardHeader className="text-center pb-4">
+                      <div className="mx-auto mb-4">
+                        <IconComponent className={`h-12 w-12 ${card.color}`} />
+                      </div>
+                      <CardTitle className="text-lg">{card.title}</CardTitle>
+                      <CardDescription>{card.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
 
-          {/* Navigation Quick Actions */}
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Navegación Rápida
-              </CardTitle>
-              <CardDescription>
-                Accede rápidamente a las secciones principales
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Productos Activos</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {(hasRole('admin') || hasRole('manager') || hasRole('cashier')) && (
-                  <button 
-                    onClick={() => navigate('/sales')}
-                    className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                  >
-                    <div className="font-medium text-green-800">Punto de Venta</div>
-                    <div className="text-sm text-green-600">Procesar transacciones</div>
-                  </button>
-                )}
-                
-                {(hasRole('admin') || hasRole('manager') || hasRole('inventory')) && (
-                  <button 
-                    onClick={() => navigate('/inventory')}
-                    className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                  >
-                    <div className="font-medium text-blue-800">Inventario</div>
-                    <div className="text-sm text-blue-600">Gestionar productos y stock</div>
-                  </button>
-                )}
-
-                {(hasRole('admin') || hasRole('manager') || hasRole('inventory')) && (
-                  <button 
-                    onClick={() => navigate('/purchases')}
-                    className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
-                  >
-                    <div className="font-medium text-purple-800">Compras</div>
-                    <div className="text-sm text-purple-600">Gestionar proveedores y facturas</div>
-                  </button>
-                )}
-                
-                {hasRole('admin') && (
-                  <button 
-                    onClick={() => navigate('/admin')}
-                    className="w-full text-left p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                  >
-                    <div className="font-medium text-red-800">Administración</div>
-                    <div className="text-sm text-red-600">Gestionar usuarios y permisos</div>
-                  </button>
-                )}
-              </div>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">
+                Productos en inventario
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ventas del Día</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">
+                Total vendido hoy
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Proveedores Activos</CardTitle>
+              <Truck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">
+                Proveedores registrados
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Crecimiento</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">
+                Respecto al mes anterior
+              </p>
             </CardContent>
           </Card>
         </div>
 
+        {/* Dialogs */}
+        <ProductDialog
+          open={showProductDialog}
+          onOpenChange={setShowProductDialog}
+          onSuccess={() => {
+            setShowProductDialog(false);
+          }}
+        />
+
         <QuickInvoiceDialog
-          open={showQuickInvoice}
-          onOpenChange={setShowQuickInvoice}
-          onSuccess={handleQuickInvoiceSuccess}
+          open={showInvoiceDialog}
+          onOpenChange={setShowInvoiceDialog}
+          onSuccess={() => {
+            setShowInvoiceDialog(false);
+          }}
+        />
+
+        <SupplierDialog
+          isOpen={showSupplierDialog}
+          onClose={() => setShowSupplierDialog(false)}
         />
       </div>
     </div>

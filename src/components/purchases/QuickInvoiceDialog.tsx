@@ -12,9 +12,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useSuppliersData } from './hooks/useSuppliersData';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import QuickSupplierDialog from './QuickSupplierDialog';
+import QuickProductDialog from './QuickProductDialog';
 
 interface QuickInvoiceDialogProps {
   open: boolean;
@@ -38,8 +40,11 @@ const QuickInvoiceDialog: React.FC<QuickInvoiceDialogProps> = ({
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
   const [items, setItems] = useState<InvoiceItem[]>([{ product_id: '', quantity: 1, unit_cost: 0, total_cost: 0 }]);
   const [loading, setLoading] = useState(false);
+  const [showSupplierDialog, setShowSupplierDialog] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
   const { toast } = useToast();
   const { suppliers } = useSuppliersData();
+  const queryClient = useQueryClient();
 
   const { data: products } = useQuery({
     queryKey: ['products-for-invoice'],
@@ -87,6 +92,15 @@ const QuickInvoiceDialog: React.FC<QuickInvoiceDialogProps> = ({
     return items.reduce((sum, item) => sum + (item.total_cost || 0), 0);
   };
 
+  const handleSupplierSuccess = (newSupplier: any) => {
+    queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    setSupplierId(newSupplier.id);
+  };
+
+  const handleProductSuccess = (newProduct: any) => {
+    queryClient.invalidateQueries({ queryKey: ['products-for-invoice'] });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supplierId || items.length === 0) return;
@@ -108,7 +122,6 @@ const QuickInvoiceDialog: React.FC<QuickInvoiceDialogProps> = ({
       
       const totalAmount = calculateTotal();
 
-      // Crear factura
       const { data: invoice, error: invoiceError } = await supabase
         .from('purchase_invoices')
         .insert([{
@@ -118,14 +131,13 @@ const QuickInvoiceDialog: React.FC<QuickInvoiceDialogProps> = ({
           subtotal: totalAmount,
           total_amount: totalAmount,
           created_by: user?.id,
-          status: 'received' // Marcamos como recibida para actualizar stock automáticamente
+          status: 'received'
         }])
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
 
-      // Crear items de la factura
       const invoiceItems = validItems.map(item => ({
         invoice_id: invoice.id,
         product_id: item.product_id,
@@ -148,7 +160,6 @@ const QuickInvoiceDialog: React.FC<QuickInvoiceDialogProps> = ({
       onSuccess();
       onOpenChange(false);
       
-      // Reset form
       setSupplierId('');
       setInvoiceDate(new Date());
       setItems([{ product_id: '', quantity: 1, unit_cost: 0, total_cost: 0 }]);
@@ -164,158 +175,193 @@ const QuickInvoiceDialog: React.FC<QuickInvoiceDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Factura Rápida de Compra</DialogTitle>
-          <DialogDescription>
-            Crear una factura de compra y actualizar stock automáticamente
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Factura Rápida de Compra</DialogTitle>
+            <DialogDescription>
+              Crear una factura de compra y actualizar stock automáticamente
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Proveedor *</Label>
-                <Select value={supplierId} onValueChange={setSupplierId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar proveedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers?.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Fecha de Factura *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !invoiceDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {invoiceDate ? format(invoiceDate, "PPP", { locale: es }) : "Seleccionar fecha"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={invoiceDate}
-                      onSelect={(date) => date && setInvoiceDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
+          <form onSubmit={handleSubmit}>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <Label className="text-lg font-semibold">Productos</Label>
-                <Button type="button" onClick={handleAddItem} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar Producto
-                </Button>
-              </div>
-
-              {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-6 gap-2 items-end border p-4 rounded">
-                  <div className="col-span-2 space-y-2">
-                    <Label>Producto</Label>
-                    <Select 
-                      value={item.product_id} 
-                      onValueChange={(value) => handleItemChange(index, 'product_id', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar producto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products?.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} ({product.sku})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Cantidad</Label>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Costo Unitario</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={item.unit_cost}
-                      onChange={(e) => handleItemChange(index, 'unit_cost', Number(e.target.value))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Total</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.total_cost.toFixed(2)}
-                      readOnly
-                      className="bg-gray-50"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>&nbsp;</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Proveedor *</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveItem(index)}
-                      disabled={items.length === 1}
+                      onClick={() => setShowSupplierDialog(true)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Select value={supplierId} onValueChange={setSupplierId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar proveedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers?.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Fecha de Factura *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !invoiceDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {invoiceDate ? format(invoiceDate, "PPP", { locale: es }) : "Seleccionar fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={invoiceDate}
+                        onSelect={(date) => date && setInvoiceDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label className="text-lg font-semibold">Productos</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowProductDialog(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuevo Producto
+                    </Button>
+                    <Button type="button" onClick={handleAddItem} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Agregar Producto
                     </Button>
                   </div>
                 </div>
-              ))}
 
-              <div className="text-right">
-                <div className="text-lg font-semibold">
-                  Total: ${calculateTotal().toFixed(2)}
+                {items.map((item, index) => (
+                  <div key={index} className="grid grid-cols-6 gap-2 items-end border p-4 rounded">
+                    <div className="col-span-2 space-y-2">
+                      <Label>Producto</Label>
+                      <Select 
+                        value={item.product_id} 
+                        onValueChange={(value) => handleItemChange(index, 'product_id', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar producto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products?.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} ({product.sku})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Cantidad</Label>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Costo Unitario</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={item.unit_cost}
+                        onChange={(e) => handleItemChange(index, 'unit_cost', Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Total</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={item.total_cost.toFixed(2)}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>&nbsp;</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveItem(index)}
+                        disabled={items.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="text-right">
+                  <div className="text-lg font-semibold">
+                    Total: ${calculateTotal().toFixed(2)}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading || !supplierId}>
-              {loading ? 'Creando...' : 'Crear Factura'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={loading || !supplierId}>
+                {loading ? 'Creando...' : 'Crear Factura'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <QuickSupplierDialog
+        open={showSupplierDialog}
+        onOpenChange={setShowSupplierDialog}
+        onSuccess={handleSupplierSuccess}
+      />
+
+      <QuickProductDialog
+        open={showProductDialog}
+        onOpenChange={setShowProductDialog}
+        onSuccess={handleProductSuccess}
+      />
+    </>
   );
 };
 

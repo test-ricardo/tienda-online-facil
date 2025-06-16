@@ -8,11 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { useSuppliersData } from './hooks/useSuppliersData';
 import SupplierDialog from './SupplierDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const SuppliersTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [supplierToDelete, setSupplierToDelete] = useState<any>(null);
   const { suppliers, isLoading, deleteSupplier } = useSuppliersData();
 
   const filteredSuppliers = suppliers?.filter(supplier =>
@@ -21,7 +33,7 @@ const SuppliersTab = () => {
     supplier.email?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleEdit = (supplier) => {
+  const handleEdit = (supplier: any) => {
     setSelectedSupplier(supplier);
     setIsDialogOpen(true);
   };
@@ -31,15 +43,21 @@ const SuppliersTab = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Está seguro de que desea eliminar este proveedor?')) {
-      await deleteSupplier(id);
+  const handleDeleteClick = (supplier: any) => {
+    setSupplierToDelete(supplier);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (supplierToDelete) {
+      deleteSupplier(supplierToDelete.id);
+      setDeleteDialogOpen(false);
+      setSupplierToDelete(null);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header with search and add button */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -63,7 +81,6 @@ const SuppliersTab = () => {
         </CardContent>
       </Card>
 
-      {/* Suppliers table */}
       <Card>
         <CardContent>
           <Table>
@@ -116,7 +133,7 @@ const SuppliersTab = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(supplier.id)}
+                          onClick={() => handleDeleteClick(supplier)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -135,6 +152,26 @@ const SuppliersTab = () => {
         onClose={() => setIsDialogOpen(false)}
         supplier={selectedSupplier}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción marcará el proveedor "{supplierToDelete?.name}" como inactivo. 
+              No se eliminará permanentemente, pero no aparecerá en las listas principales.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

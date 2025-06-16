@@ -30,6 +30,7 @@ export const useSuppliersData = () => {
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
+        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
@@ -41,7 +42,7 @@ export const useSuppliersData = () => {
     mutationFn: async (supplier: Supplier) => {
       const { data, error } = await supabase
         .from('suppliers')
-        .insert([supplier])
+        .insert([{ ...supplier, is_active: true }])
         .select()
         .single();
 
@@ -97,7 +98,7 @@ export const useSuppliersData = () => {
     mutationFn: async (id: string) => {
       const { error } = await supabase
         .from('suppliers')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;
@@ -106,7 +107,7 @@ export const useSuppliersData = () => {
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast({
         title: "Proveedor eliminado",
-        description: "El proveedor ha sido eliminado exitosamente.",
+        description: "El proveedor ha sido marcado como inactivo.",
       });
     },
     onError: (error) => {
