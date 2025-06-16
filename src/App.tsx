@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
 import Inventory from "@/pages/Inventory";
+import Purchases from "@/pages/Purchases";
 import Sales from "@/pages/Sales";
 import Admin from "@/pages/Admin";
 import AuthPage from "@/components/auth/AuthPage";
@@ -53,6 +54,16 @@ const App = () => (
                     <Navbar />
                     <main className="flex-1">
                       <Inventory />
+                    </main>
+                  </>
+                </ProtectedRoute>
+              } />
+              <Route path="/purchases" element={
+                <ProtectedRoute>
+                  <>
+                    <Navbar />
+                    <main className="flex-1">
+                      <Purchases />
                     </main>
                   </>
                 </ProtectedRoute>
