@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,8 +25,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { formData, setFormData } = useProductForm(product, open);
+  const queryClient = useQueryClient();
 
-  const { data: categories } = useQuery({
+  const { data: categories, refetch: refetchCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -38,7 +39,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     },
   });
 
-  const { data: subcategories } = useQuery({
+  const { data: subcategories, refetch: refetchSubcategories } = useQuery({
     queryKey: ['subcategories', formData.category_id],
     queryFn: async () => {
       if (!formData.category_id) return [];
@@ -102,6 +103,19 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
 
   const handleCancel = () => {
     onOpenChange(false);
+  };
+
+  // Refrescar categorías y subcategorías cuando se agreguen nuevas
+  const handleCategorySuccess = (newCategory: any) => {
+    refetchCategories();
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
+    setFormData({ ...formData, category_id: newCategory.id, subcategory_id: '' });
+  };
+
+  const handleSubcategorySuccess = (newSubcategory: any) => {
+    refetchSubcategories();
+    queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+    setFormData({ ...formData, subcategory_id: newSubcategory.id });
   };
 
   return (

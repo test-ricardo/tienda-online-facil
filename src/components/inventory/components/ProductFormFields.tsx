@@ -1,10 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import CategoryQuickAddDialog from '../CategoryQuickAddDialog';
 
 interface ProductFormFieldsProps {
   formData: any;
@@ -30,6 +33,17 @@ const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
   categories,
   subcategories,
 }) => {
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
+
+  const handleNewCategory = (newCategory: any) => {
+    setFormData({ ...formData, category_id: newCategory.id, subcategory_id: '' });
+  };
+
+  const handleNewSubcategory = (newSubcategory: any) => {
+    setFormData({ ...formData, subcategory_id: newSubcategory.id });
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -90,7 +104,17 @@ const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="category">Categoría *</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="category">Categoría *</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCategoryDialog(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
           <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value, subcategory_id: '' })}>
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar categoría" />
@@ -105,8 +129,24 @@ const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="subcategory">Subcategoría</Label>
-          <Select value={formData.subcategory_id} onValueChange={(value) => setFormData({ ...formData, subcategory_id: value })}>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="subcategory">Subcategoría</Label>
+            {formData.category_id && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSubcategoryDialog(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <Select 
+            value={formData.subcategory_id} 
+            onValueChange={(value) => setFormData({ ...formData, subcategory_id: value })}
+            disabled={!formData.category_id}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Seleccionar subcategoría" />
             </SelectTrigger>
@@ -177,6 +217,21 @@ const ProductFormFields: React.FC<ProductFormFieldsProps> = ({
         />
         <Label htmlFor="sell_by_weight">Se vende por peso/decimales</Label>
       </div>
+
+      <CategoryQuickAddDialog
+        open={showCategoryDialog}
+        onOpenChange={setShowCategoryDialog}
+        type="category"
+        onSuccess={handleNewCategory}
+      />
+
+      <CategoryQuickAddDialog
+        open={showSubcategoryDialog}
+        onOpenChange={setShowSubcategoryDialog}
+        type="subcategory"
+        categoryId={formData.category_id}
+        onSuccess={handleNewSubcategory}
+      />
     </div>
   );
 };

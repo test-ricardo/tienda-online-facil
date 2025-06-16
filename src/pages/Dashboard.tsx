@@ -1,11 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShoppingCart, Package, DollarSign, Users, TrendingUp, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ShoppingCart, Package, DollarSign, Users, TrendingUp, AlertCircle, FileText, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import QuickInvoiceDialog from '@/components/purchases/QuickInvoiceDialog';
 
 const Dashboard = () => {
   const { user, userRoles, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const [showQuickInvoice, setShowQuickInvoice] = useState(false);
 
   const stats = [
     {
@@ -48,6 +53,10 @@ const Dashboard = () => {
 
   const visibleStats = stats.filter(stat => stat.visible);
 
+  const handleQuickInvoiceSuccess = () => {
+    // Podríamos refrescar estadísticas aquí si fuera necesario
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -58,6 +67,50 @@ const Dashboard = () => {
             Bienvenido, {user?.email} | Roles: {userRoles.map(role => role.charAt(0).toUpperCase() + role.slice(1)).join(', ')}
           </p>
         </div>
+
+        {/* Quick Actions Bar */}
+        {(hasRole('admin') || hasRole('manager') || hasRole('inventory')) && (
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Acciones Rápidas
+                </CardTitle>
+                <CardDescription>
+                  Accesos directos a las funciones más utilizadas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4">
+                  <Button 
+                    onClick={() => setShowQuickInvoice(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Cargar Factura de Compra
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate('/inventory')}
+                    className="flex items-center gap-2"
+                  >
+                    <Package className="h-4 w-4" />
+                    Gestionar Inventario
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate('/purchases')}
+                    className="flex items-center gap-2"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Ver Compras
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -130,43 +183,68 @@ const Dashboard = () => {
             </Card>
           )}
 
-          {/* Quick Actions */}
+          {/* Navigation Quick Actions */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                Acciones Rápidas
+                Navegación Rápida
               </CardTitle>
               <CardDescription>
-                Acciones disponibles según tus permisos
+                Accede rápidamente a las secciones principales
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {(hasRole('admin') || hasRole('manager') || hasRole('cashier')) && (
-                  <button className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
-                    <div className="font-medium text-green-800">Nueva Venta</div>
-                    <div className="text-sm text-green-600">Procesar transacción</div>
+                  <button 
+                    onClick={() => navigate('/sales')}
+                    className="w-full text-left p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                  >
+                    <div className="font-medium text-green-800">Punto de Venta</div>
+                    <div className="text-sm text-green-600">Procesar transacciones</div>
                   </button>
                 )}
                 
                 {(hasRole('admin') || hasRole('manager') || hasRole('inventory')) && (
-                  <button className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                    <div className="font-medium text-blue-800">Agregar Producto</div>
-                    <div className="text-sm text-blue-600">Gestionar inventario</div>
+                  <button 
+                    onClick={() => navigate('/inventory')}
+                    className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                  >
+                    <div className="font-medium text-blue-800">Inventario</div>
+                    <div className="text-sm text-blue-600">Gestionar productos y stock</div>
+                  </button>
+                )}
+
+                {(hasRole('admin') || hasRole('manager') || hasRole('inventory')) && (
+                  <button 
+                    onClick={() => navigate('/purchases')}
+                    className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                  >
+                    <div className="font-medium text-purple-800">Compras</div>
+                    <div className="text-sm text-purple-600">Gestionar proveedores y facturas</div>
                   </button>
                 )}
                 
                 {hasRole('admin') && (
-                  <button className="w-full text-left p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors">
-                    <div className="font-medium text-purple-800">Gestionar Usuarios</div>
-                    <div className="text-sm text-purple-600">Administrar permisos</div>
+                  <button 
+                    onClick={() => navigate('/admin')}
+                    className="w-full text-left p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  >
+                    <div className="font-medium text-red-800">Administración</div>
+                    <div className="text-sm text-red-600">Gestionar usuarios y permisos</div>
                   </button>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
+
+        <QuickInvoiceDialog
+          open={showQuickInvoice}
+          onOpenChange={setShowQuickInvoice}
+          onSuccess={handleQuickInvoiceSuccess}
+        />
       </div>
     </div>
   );
